@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation Popup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg-main: #222222;
+            --bg-header: #2E2E2E;
+            --bg-modal: #1c1c1c;
+            --bg-content: #252525;
+            --bg-preview: #111111;
+            --text-main: #E0E0E0;
+            --text-muted: #CCCCCC;
+            --text-dim: #888888;
+            --input-bg: #1A1A1A;
+            --border-color: #333333;
+            --accent-color: #555555;
+            --color-ascending: #cce971;
+            --btn-red: #fe5c5c;
+            --btn-yellow: #f8fb4a;
+            --btn-green: #cdfa71;
+            --btn-blue: #4a90e2;
+            --text-dark: #222;
+            --font-family: 'Geologica', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: var(--font-family);
+        }
+
+        /* ── Overlay ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        /* ── Modal Shell ── */
+        .modal {
+            width: 740px;
+            max-width: 96vw;
+            height: 510px;
+            max-height: 92vh;
+            background: var(--bg-modal);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+        }
+
+        /* ── Title Bar ── */
+        .modal-titlebar {
+            flex-shrink: 0;
+            background: var(--bg-header);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #111;
+        }
+
+        .modal-title {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            color: var(--text-main);
+        }
+
+        .titlebar-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .titlebar-btn {
+            width: 16px;
+            height: 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s;
+        }
+
+        .titlebar-btn:hover {
+            opacity: 0.75;
+        }
+
+        .titlebar-btn img {
+            width: 16px;
+            height: 16px;
+            display: block;
+        }
+
+        /* ── Tab Row ── */
+        .tab-row {
+            flex-shrink: 0;
+            display: flex;
+            align-items: stretch;
+            background: var(--bg-header);
+            border-bottom: 1px solid #111;
+            padding: 0 8px;
+            gap: 2px;
+        }
+
+        .tab-spacer {
+            flex: 1;
+        }
+
+        .tab {
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: color 0.15s, border-color 0.15s;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: var(--text-main);
+        }
+
+        .tab.active {
+            color: var(--text-main);
+            border-bottom-color: var(--btn-green);
+        }
+
+        .tab-divider {
+            width: 1px;
+            background: #333;
+            margin: 6px 6px;
+            align-self: stretch;
+        }
+
+        /* ── Body ── */
+        .modal-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ── Left Pane (settings) ── */
+        .left-pane {
+            width: 340px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #111;
+            overflow: hidden;
+        }
+
+        .constellation-name-block {
+            flex-shrink: 0;
+            padding: 14px 16px 12px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-content);
+        }
+
+        .constellation-name-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .constellation-name-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #444;
+            color: var(--text-main);
+            font-size: 22px;
+            font-weight: 700;
+            font-family: var(--font-family);
+            outline: none;
+            padding-bottom: 4px;
+            transition: border-color 0.2s;
+        }
+
+        .constellation-name-input::placeholder {
+            color: #444;
+            font-weight: 700;
+            font-family: var(--font-family);
+        }
+
+        .constellation-name-input:focus {
+            border-bottom-color: var(--btn-green);
+        }
+
+        /* ── Scrollable Settings Area ── */
+        .settings-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: var(--bg-content);
+            direction: rtl;
+        }
+
+        .settings-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .settings-scroll::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .settings-scroll::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 3px;
+        }
+
+        .settings-inner {
+            direction: ltr;
+        }
+
+        /* Tab content panels */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* ── Sections ── */
+        .settings-section {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+
+        .settings-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #333;
+        }
+
+        /* ── Faded / disabled field group ── */
+        .fields-group {
+            transition: opacity 0.25s ease;
+        }
+
+        .fields-group.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .fields-group.disabled .form-input,
+        .fields-group.disabled select {
+            cursor: not-allowed;
+        }
+
+        /* ── Section title tooltip ── */
+        .settings-section-title {
+            position: relative;
+            cursor: default;
+        }
+
+        .title-info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            border: 1px solid #555;
+            color: #666;
+            font-size: 9px;
+            font-weight: 700;
+            flex-shrink: 0;
+            cursor: help;
+            margin-left: -2px;
+            transition: border-color 0.15s, color 0.15s;
+            user-select: none;
+        }
+
+        .title-info:hover {
+            border-color: #999;
+            color: #ccc;
+        }
+
+        .tooltip-box {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            z-index: 200;
+            width: 220px;
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--text-muted);
+            line-height: 1.5;
+            letter-spacing: 0;
+            text-transform: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+
+        .tooltip-box::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 14px;
+            width: 8px;
+            height: 8px;
+            background: #1a1a1a;
+            border-left: 1px solid #3a3a3a;
+            border-top: 1px solid #3a3a3a;
+            transform: rotate(45deg);
+        }
+
+        .title-info:hover+.tooltip-box,
+        .title-info:focus+.tooltip-box {
+            display: block;
+        }
+
+        /* ── Form Rows ── */
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 7px;
+        }
+
+        .form-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            flex: 1;
+            padding-right: 8px;
+        }
+
+        .form-input {
+            width: 110px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: none;
+            padding: 4px 6px;
+            font-size: 12px;
+            font-family: var(--font-family);
+            outline: none;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .form-input:focus {
+            outline: 1px solid #444;
+        }
+
+        select.form-input {
+            appearance: none;
+            cursor: pointer;
+        }
+
+        /* Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 28px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #555;
+            border-radius: 14px;
+            transition: .3s;
+        }
+
+        .slider::before {
+            content: '';
+            position: absolute;
+            height: 10px;
+            width: 10px;
+            left: 2px;
+            bottom: 2px;
+            background: white;
+            border-radius: 50%;
+            transition: .3s;
+        }
+
+        .switch input:checked+.slider {
+            background: #999;
+        }
+
+        .switch input:checked+.slider::before {
+            transform: translateX(14px);
+            background: #222;
+        }
+
+        /* Sub-group (apogee/perigee indent) */
+        .sub-group {
+            margin-left: 10px;
+            padding-left: 10px;
+            padding-top: 4px;
+            padding-bottom: 4px;
+            border-left: 1px solid #666;
+            margin-bottom: 7px;
+        }
+
+        .sub-group .form-row {
+            margin-bottom: 5px;
+        }
+
+        .sub-group .form-row:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Unit hint */
+        .form-hint {
+            font-size: 10px;
+            color: #555;
+            margin-top: -5px;
+            margin-bottom: 7px;
+            text-align: right;
+            padding-right: 2px;
+        }
+
+        /* ── Right Pane (preview) ── */
+        .right-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-preview);
+            overflow: hidden;
+        }
+
+        .preview-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0e0e0e;
+            position: relative;
+        }
+
+        .preview-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.18;
+            pointer-events: none;
+        }
+
+        .preview-placeholder svg {
+            width: 48px;
+            height: 48px;
+        }
+
+        .preview-placeholder span {
+            font-size: 11px;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        .preview-panel {
+            display: none;
+            position: absolute;
+            inset: 0;
+        }
+
+        .preview-panel.active {
+            display: flex;
+        }
+
+        .preview-panel canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+
+        /* ── Footer ── */
+        .modal-footer {
+            flex-shrink: 0;
+            background: var(--bg-header);
+            padding: 10px 16px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+            border-top: 1px solid #111;
+        }
+
+        .btn {
+            border: none;
+            padding: 6px 16px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font-family);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-cancel {
+            background: var(--btn-red);
+            color: white;
+        }
+
+        .btn-reset {
+            background: var(--btn-yellow);
+            color: var(--text-dark);
+        }
+
+        .btn-save {
+            background: var(--btn-green);
+            color: var(--text-dark);
+        }
+
+        .btn-save svg {
+            width: 14px;
+            height: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="modal-overlay">
+        <div class="modal">
+
+            <!-- Title Bar -->
+            <div class="modal-titlebar">
+                <span class="modal-title">Add Constellation</span>
+                <div class="titlebar-controls">
+                    <button class="titlebar-btn"><img src="/static/icon/buttonMinimize.svg" alt="Minimize"></button>
+                    <button class="titlebar-btn"><img src="/static/icon/buttonRestore.svg" alt="Restore"></button>
+                    <button class="titlebar-btn"
+                        onclick="document.querySelector('.modal-overlay').style.display='none'"><img
+                            src="/static/icon/buttonClose.svg" alt="Close"></button>
+                </div>
+            </div>
+
+            <!-- Tab Row -->
+            <div class="tab-row">
+                <div class="tab active" data-tab="orbit">Orbit</div>
+                <div class="tab" data-tab="payload">Payload</div>
+                <div class="tab" data-tab="bus">Bus</div>
+                <div class="tab-spacer"></div>
+                <div class="tab-divider"></div>
+                <div class="tab preview-tab-main active" data-preview="satellite">Single Satellite Preview</div>
+                <div class="tab preview-tab-main" data-preview="orbital">Orbital View</div>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+
+                <!-- Left Pane -->
+                <div class="left-pane">
+
+                    <!-- Constellation Name -->
+                    <div class="constellation-name-block">
+                        <div class="constellation-name-label">Constellation Name</div>
+                        <input class="constellation-name-input" type="text" placeholder="Untitled">
+                    </div>
+
+                    <!-- Scrollable Settings -->
+                    <div class="settings-scroll">
+                        <div class="settings-inner">
+
+                            <!-- ═══════════════ ORBIT TAB ═══════════════ -->
+                            <div class="tab-panel active" id="panel-orbit">
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Orbital Parameters <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Defines the shape and orientation of the satellite's
+                                            orbit around Earth — altitude, inclination, plane count, and distribution of
+                                            satellites.</div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <span class="form-label">Inclination (deg)</span>
+                                        <input type="text" class="form-input" id="pop-inclination" value="53">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Orbital Planes</span>
+                                        <input type="text" class="form-input" id="pop-planes" value="20">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Sats per Plane</span>
+                                        <input type="text" class="form-input" id="pop-sats-per-plane" value="22">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Symmetric Orbit</span>
+                                        <label class="switch"><input type="checkbox" id="sym-toggle" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="sub-group">
+                                        <div class="form-row">
+                                            <span class="form-label">Apogee (km)</span>
+                                            <input type="text" class="form-input" id="pop-apogee" value="550">
+                                        </div>
+                                        <div class="fields-group" id="perigee-fields">
+                                            <div class="form-row" style="margin-top:5px;">
+                                                <span class="form-label">Perigee (km)</span>
+                                                <input type="text" class="form-input" id="pop-perigee" value="550">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Eccentricity</span>
+                                        <input type="text" class="form-input" value="0.0001">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">RAAN Spread (deg)</span>
+                                        <input type="text" class="form-input" id="pop-raan-spread" value="15">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Argument of Perigee (deg)</span>
+                                        <input type="text" class="form-input" value="0">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">True Anomaly (deg)</span>
+                                        <input type="text" class="form-input" value="0">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Lifecycle <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Defines the satellite's operational lifetime, planned
+                                            deorbit altitude, and how many phasing orbits are used during deployment.
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Orbit Decay (Years)</span>
+                                        <input type="text" class="form-input" value="5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Design Lifetime (Years)</span>
+                                        <input type="text" class="form-input" value="7">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Disposal Altitude (km)</span>
+                                        <input type="text" class="form-input" value="400">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Phasing Orbits</span>
+                                        <input type="text" class="form-input" value="2">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Propagation <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Controls how the orbital state is simulated over time.
+                                            SGP4 is standard for LEO TLEs; numerical propagators offer higher fidelity
+                                            with configurable drag and solar pressure models.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propagator</span>
+                                        <select class="form-input">
+                                            <option selected>SGP4</option>
+                                            <option>J2</option>
+                                            <option>Numerical</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Drag Model</span>
+                                        <select class="form-input">
+                                            <option selected>NRLMSISE-00</option>
+                                            <option>JB2008</option>
+                                            <option>Exponential</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Ballistic Coeff. (kg/m²)</span>
+                                        <input type="text" class="form-input" value="50">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Solar Pressure Coeff.</span>
+                                        <input type="text" class="form-input" value="1.3">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Step Size (s)</span>
+                                        <input type="text" class="form-input" value="60">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Station Keeping <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Station keeping uses onboard thrusters to correct
+                                            orbital drift caused by atmospheric drag, solar pressure, and gravitational
+                                            perturbations, keeping each satellite in its assigned slot.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Enable SK</span>
+                                        <label class="switch"><input type="checkbox" id="sk-toggle" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="fields-group" id="sk-fields">
+                                        <div class="form-row">
+                                            <span class="form-label">East-West Deadband (deg)</span>
+                                            <input type="text" class="form-input" value="0.05">
+                                        </div>
+                                        <div class="form-row">
+                                            <span class="form-label">North-South Deadband (deg)</span>
+                                            <input type="text" class="form-input" value="0.05">
+                                        </div>
+                                        <div class="form-row">
+                                            <span class="form-label">Δv Budget (m/s/yr)</span>
+                                            <input type="text" class="form-input" value="50">
+                                        </div>
+                                        <div class="form-row">
+                                            <span class="form-label">Thruster Type</span>
+                                            <select class="form-input">
+                                                <option selected>Hall-Effect</option>
+                                                <option>Ion</option>
+                                                <option>Cold Gas</option>
+                                                <option>Chemical</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div><!-- /panel-orbit -->
+
+                            <!-- ═══════════════ PAYLOAD TAB ═══════════════ -->
+                            <div class="tab-panel" id="panel-payload">
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">User Beam <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Configures the downlink spot beams projected onto
+                                            Earth's surface — quantity, footprint size, frequency reuse pattern, and
+                                            whether beams can hop dynamically between zones.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Quantity</span>
+                                        <input type="text" class="form-input" id="pop-beam-quantity" value="24">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Size (km)</span>
+                                        <input type="text" class="form-input" id="pop-beam-size" value="300">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Colours (Frequency Reuse)</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Scan Angle (deg)</span>
+                                        <input type="text" class="form-input" value="60">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Hopping</span>
+                                        <label class="switch"><input type="checkbox"><span
+                                                class="slider"></span></label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">RF Link Budget <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Sets the radio frequency parameters for the user link —
+                                            transmit power, antenna gain, noise figure (G/T), and polarisation scheme —
+                                            used to compute C/N₀ and link margin.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Frequency Band</span>
+                                        <select class="form-input">
+                                            <option>Ka (26.5–40 GHz)</option>
+                                            <option selected>Ku (12–18 GHz)</option>
+                                            <option>Q/V (40–75 GHz)</option>
+                                            <option>L (1–2 GHz)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Downlink Frequency (GHz)</span>
+                                        <input type="text" class="form-input" value="12.5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Uplink Frequency (GHz)</span>
+                                        <input type="text" class="form-input" value="14.25">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Tx Power / EIRP (dBW)</span>
+                                        <input type="text" class="form-input" value="35">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Antenna Gain (dB)</span>
+                                        <input type="text" class="form-input" id="pop-gain" value="45">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">G/T (dB/K)</span>
+                                        <input type="text" class="form-input" value="8.5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Polarisation</span>
+                                        <select class="form-input">
+                                            <option selected>RHCP / LHCP</option>
+                                            <option>Linear H/V</option>
+                                            <option>Dual Linear</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Capacity & Throughput <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Defines the aggregate data capacity of the satellite,
+                                            driven by available bandwidth, spectral efficiency, modulation order, and
+                                            forward error correction (FEC) coding rate.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Total Throughput (Gbps)</span>
+                                        <input type="text" class="form-input" value="100">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Bandwidth per Beam (MHz)</span>
+                                        <input type="text" class="form-input" value="500">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Spectral Efficiency (b/s/Hz)</span>
+                                        <input type="text" class="form-input" value="4.0">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Modulation</span>
+                                        <select class="form-input">
+                                            <option>BPSK</option>
+                                            <option>QPSK</option>
+                                            <option selected>16-APSK</option>
+                                            <option>32-APSK</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">FEC Rate</span>
+                                        <select class="form-input">
+                                            <option>1/2</option>
+                                            <option>2/3</option>
+                                            <option selected>3/4</option>
+                                            <option>5/6</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Inter-Satellite Links <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">ISLs connect satellites directly to each other without
+                                            routing through a ground station, enabling low-latency mesh networking
+                                            across the constellation via optical or RF crosslinks.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">ISL Type</span>
+                                        <select class="form-input">
+                                            <option selected>Laser (OCA)</option>
+                                            <option>RF</option>
+                                            <option>Microwave</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">ISL Tx Capacity (Gbps)</span>
+                                        <input type="text" class="form-input" value="100">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Lasers per Satellite</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Max ISL Range (km)</span>
+                                        <input type="text" class="form-input" value="5000">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Inter-plane ISL</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Intra-plane ISL</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Gateway / Feeder Link <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The feeder link connects the satellite to ground
+                                            gateways, carrying aggregated user traffic to the internet backbone.
+                                            Capacity and minimum elevation angle determine gateway density.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Backhaul Tx Capacity (Gbps)</span>
+                                        <input type="text" class="form-input" value="20">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Up Backhaul Quantity</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Feeder Frequency (GHz)</span>
+                                        <input type="text" class="form-input" value="19.7">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Min Elev. Angle (deg)</span>
+                                        <input type="text" class="form-input" value="10">
+                                    </div>
+                                </div>
+
+                            </div><!-- /panel-payload -->
+
+                            <!-- ═══════════════ BUS TAB ═══════════════ -->
+                            <div class="tab-panel" id="panel-bus">
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Physical Properties <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Mass and geometry of the satellite bus. Dry mass
+                                            excludes propellant; launch mass is the total. Frontal area directly affects
+                                            atmospheric drag at low altitudes.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Dry Mass (kg)</span>
+                                        <input type="text" class="form-input" value="260">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propellant Mass (kg)</span>
+                                        <input type="text" class="form-input" value="40">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Launch Mass (kg)</span>
+                                        <input type="text" class="form-input" value="300">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Body Dimensions (m)</span>
+                                        <input type="text" class="form-input" value="1.2×0.9×0.7">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Frontal Area (m²)</span>
+                                        <input type="text" class="form-input" value="1.08">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Power System <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Solar arrays generate primary power; batteries sustain
+                                            operations during eclipse. End-of-life power accounts for solar cell
+                                            degradation over the mission lifetime.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Solar Array Power (W)</span>
+                                        <input type="text" class="form-input" value="3500">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">End-of-Life Power (W)</span>
+                                        <input type="text" class="form-input" value="2800">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Battery Capacity (Wh)</span>
+                                        <input type="text" class="form-input" value="800">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Battery Chemistry</span>
+                                        <select class="form-input">
+                                            <option selected>Li-Ion</option>
+                                            <option>LiPo</option>
+                                            <option>NiH₂</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Payload Power Draw (W)</span>
+                                        <input type="text" class="form-input" value="1800">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Attitude Control (ADCS) <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The ADCS keeps the satellite precisely oriented —
+                                            pointing antennas at Earth and solar panels at the Sun. Reaction wheels
+                                            provide fine torque; magnetorquers offload momentum buildup.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">ADCS Type</span>
+                                        <select class="form-input">
+                                            <option selected>3-Axis Stabilised</option>
+                                            <option>Gravity Gradient</option>
+                                            <option>Spin Stabilised</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Pointing Accuracy (arcsec)</span>
+                                        <input type="text" class="form-input" value="30">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Reaction Wheel Count</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Star Tracker</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Magnetorquers</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Propulsion <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The propulsion system executes orbit raise, station
+                                            keeping, collision avoidance, and deorbit manoeuvres. Specific impulse (Isp)
+                                            indicates fuel efficiency; higher Isp means less propellant mass needed.
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propulsion Type</span>
+                                        <select class="form-input">
+                                            <option selected>Hall-Effect Ion</option>
+                                            <option>Gridded Ion</option>
+                                            <option>Cold Gas</option>
+                                            <option>Monopropellant</option>
+                                            <option>Bipropellant</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Specific Impulse (s)</span>
+                                        <input type="text" class="form-input" value="1600">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Thrust (mN)</span>
+                                        <input type="text" class="form-input" value="180">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propellant</span>
+                                        <select class="form-input">
+                                            <option selected>Xenon</option>
+                                            <option>Krypton</option>
+                                            <option>Argon</option>
+                                            <option>Hydrazine</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Thermal Control <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Manages the extreme temperature swings of the space
+                                            environment (-150 °C to +120 °C). Passive systems use coatings and
+                                            radiators; heat pipes spread hotspots; active heaters prevent cold soak.
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Thermal Control Type</span>
+                                        <select class="form-input">
+                                            <option selected>Passive + Heat Pipes</option>
+                                            <option>Passive Only</option>
+                                            <option>Active Heaters</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Radiator Area (m²)</span>
+                                        <input type="text" class="form-input" value="1.5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Op. Temp Range (°C)</span>
+                                        <input type="text" class="form-input" value="-20 / +55">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">On-Board Computer <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The OBC is the satellite's central processor — running
+                                            flight software, managing telemetry, and coordinating all subsystems.
+                                            Radiation tolerance is critical for long LEO missions above the Van Allen
+                                            belts.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">OBC Architecture</span>
+                                        <select class="form-input">
+                                            <option selected>ARM Cortex-R</option>
+                                            <option>RISC-V</option>
+                                            <option>FPGA-based</option>
+                                            <option>Rad-Hard SPARC</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Processing Power (MIPS)</span>
+                                        <input type="text" class="form-input" value="800">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Mass Memory (GB)</span>
+                                        <input type="text" class="form-input" value="512">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Radiation Tolerance (krad)</span>
+                                        <input type="text" class="form-input" value="100">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Redundancy</span>
+                                        <select class="form-input">
+                                            <option>None</option>
+                                            <option selected>Cold Redundant</option>
+                                            <option>Hot Redundant</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                            </div><!-- /panel-bus -->
+
+                        </div><!-- /settings-inner -->
+                    </div><!-- /settings-scroll -->
+                </div><!-- /left-pane -->
+
+                <!-- Right Pane -->
+                <div class="right-pane">
+                    <div class="preview-area">
+                        <div class="preview-panel active" id="pview-satellite">
+                            <canvas id="canvas-satellite"></canvas>
+                        </div>
+                        <div class="preview-panel" id="pview-orbital">
+                            <canvas id="canvas-orbital"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /modal-body -->
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button class="btn btn-cancel">Cancel</button>
+                <button class="btn btn-reset">Reset</button>
+                <button class="btn btn-save">
+                    Save
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+
+        </div><!-- /modal -->
+    </div><!-- /overlay -->
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────
+        // SYMMETRIC ORBIT TOGGLE
+        // ─────────────────────────────────────────────────────────────────
+        const symToggle = document.getElementById('sym-toggle');
+        const perigeeFields = document.getElementById('perigee-fields');
+        const apogeeInput = document.getElementById('pop-apogee');
+        const perigeeInput = document.getElementById('pop-perigee');
+
+        function updateSym() {
+            const sym = symToggle.checked;
+            perigeeFields.classList.toggle('disabled', sym);
+            if (sym) {
+                // mirror perigee = apogee
+                perigeeInput.value = apogeeInput.value;
+            }
+        }
+        symToggle.addEventListener('change', () => { updateSym(); rebuildOrbits(); rebuildBeams(); });
+        // Keep perigee in sync while typing apogee in symmetric mode
+        apogeeInput.addEventListener('input', () => {
+            if (symToggle.checked) perigeeInput.value = apogeeInput.value;
+        });
+        updateSym(); // init
+        // ─────────────────────────────────────────────────────────────────
+        // STATION KEEPING TOGGLE
+        // ─────────────────────────────────────────────────────────────────
+        const skToggle = document.getElementById('sk-toggle');
+        const skFields = document.getElementById('sk-fields');
+        function updateSK() { skFields.classList.toggle('disabled', !skToggle.checked); }
+        skToggle.addEventListener('change', updateSK);
+        updateSK();
+
+        // ─────────────────────────────────────────────────────────────────
+        // LEFT TAB SWITCHING (Orbit / Payload / Bus)
+        // ─────────────────────────────────────────────────────────────────
+        document.querySelectorAll('.tab-row .tab:not(.preview-tab-main)').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab-row .tab:not(.preview-tab-main)').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // ─────────────────────────────────────────────────────────────────
+        // RIGHT TAB SWITCHING (Single Satellite / Orbital View)
+        // ─────────────────────────────────────────────────────────────────
+        document.querySelectorAll('.preview-tab-main').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.preview-tab-main').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.preview-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                const id = 'pview-' + tab.dataset.preview;
+                document.getElementById(id).classList.add('active');
+                activePreview = tab.dataset.preview;
+                if (activePreview === 'orbital' && !orbInit) {
+                    setTimeout(() => { initOrbScene(); resizeOrb(); }, 30);
+                } else if (activePreview === 'satellite') {
+                    resizeSat();
+                } else {
+                    resizeOrb();
+                }
+            });
+        });
+
+        // ─────────────────────────────────────────────────────────────────
+        // SHARED CONSTANTS
+        // ─────────────────────────────────────────────────────────────────
+        const D = Math.PI / 180;
+        const ER_KM = 6371;
+        const SC = 0.01;          // scene units per km
+        const ER = ER_KM * SC;    // earth radius in scene units
+        const MXB = 256;           // max beams
+        const HIDE = new THREE.Matrix4().makeScale(0, 0, 0);
+        const PLANE_COLS = [0xcce971, 0xffcc00, 0xff6b6b, 0x00eeff, 0xaa88ff, 0xff9944, 0x44ffaa, 0xff88cc];
+
+        let activePreview = 'satellite';
+
+        // ─────────────────────────────────────────────────────────────────
+        // READ FORM PARAMS
+        // ─────────────────────────────────────────────────────────────────
+        function fv(id, def) {
+            const el = document.getElementById(id);
+            return el ? (parseFloat(el.value) || def) : def;
+        }
+        function fi(id, def) { return Math.max(1, Math.round(fv(id, def))); }
+        function getP() {
+            return {
+                inc: fv('pop-inclination', 53),
+                planes: fi('pop-planes', 20),
+                sats: fi('pop-sats-per-plane', 22),
+                apogee: fv('pop-apogee', 550),
+                perigee: fv('pop-perigee', 550),
+                beams: fi('pop-beam-quantity', 24),
+                gain: fv('pop-gain', 45),
+                beamSize: fv('pop-beam-size', 300),  // physical diameter in km
+                raan: fv('pop-raan-spread', 180),
+            };
+        }
+        function meanAlt(p) { return (p.apogee + p.perigee) / 2; }
+
+        // ─────────────────────────────────────────────────────────────────
+        // TEXTURE LOADING
+        // ─────────────────────────────────────────────────────────────────
+        const TL = new THREE.TextureLoader();
+        let dayTex = null;
+
+        TL.load('/static/icon/textures/8k_earth_daymap.jpg', tex => {
+            dayTex = tex;
+            [satEarth, orbEarth].forEach(m => {
+                if (!m) return;
+                m.material.map = tex;
+                m.material.color.setHex(0xaaaaaa);
+                m.material.needsUpdate = true;
+            });
+        });
+
+        function applyTex(mesh) {
+            if (!dayTex || !mesh) return;
+            mesh.material.map = dayTex;
+            mesh.material.color.setHex(0xaaaaaa);
+            mesh.material.needsUpdate = true;
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // HELPERS
+        // ─────────────────────────────────────────────────────────────────
+        function llv(lat, lon, r) {
+            const phi = (90 - lat) * D;
+            const theta = (lon + 180) * D;
+            return new THREE.Vector3(
+                -(r * Math.sin(phi) * Math.cos(theta)),
+                r * Math.cos(phi),
+                r * Math.sin(phi) * Math.sin(theta)
+            );
+        }
+        // beamHalfAngle: physical size takes priority, falls back to gain
+        function beamHA(gainDb, beamSizeKm, altKm) {
+            if (beamSizeKm > 0 && altKm > 0) return Math.atan((beamSizeKm / 2) / altKm);
+            return Math.sqrt(26000 / Math.pow(10, gainDb / 10)) * D;
+        }
+        function makeStars(n, spread) {
+            const g = new THREE.BufferGeometry();
+            const v = new Float32Array(n * 3);
+            for (let i = 0; i < v.length; i++) v[i] = (Math.random() - 0.5) * spread;
+            g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+            return new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 0.6 }));
+        }
+        function makeEarth(segments) {
+            return new THREE.Mesh(
+                new THREE.SphereGeometry(ER, segments, segments),
+                new THREE.MeshPhongMaterial({ color: 0x1a3a5c, emissive: 0x000408, shininess: 6 })
+            );
+        }
+        function makeAtmo(opacity) {
+            return new THREE.Mesh(
+                new THREE.SphereGeometry(ER * 1.014, 40, 40),
+                new THREE.MeshBasicMaterial({ color: 0x3366cc, transparent: true, opacity, side: THREE.BackSide })
+            );
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // ── SATELLITE BEAM PREVIEW ────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────
+        let satScene, satCam, satRenderer, satCtrl, satEarth, satModel, satBeamIM, satFpIM;
+        const bDum = new THREE.Object3D(), fpDum = new THREE.Object3D();
+
+        function initSatScene() {
+            const canvas = document.getElementById('canvas-satellite');
+            const W = canvas.parentElement.clientWidth || 380;
+            const H = canvas.parentElement.clientHeight || 370;
+
+            satScene = new THREE.Scene();
+            satCam = new THREE.PerspectiveCamera(42, W / H, 0.01, 3000);
+            satRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            satRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+            satRenderer.setSize(W, H);
+            satRenderer.setClearColor(0x050810);
+
+            satCtrl = new THREE.OrbitControls(satCam, canvas);
+            satCtrl.enablePan = false;
+            satCtrl.minDistance = 0.08;   // close enough to inspect satellite model
+            satCtrl.maxDistance = ER * 12;
+
+            // Lighting
+            satScene.add(new THREE.AmbientLight(0x202030, 1.4));
+            const sun = new THREE.DirectionalLight(0xfff5e8, 1.7);
+            sun.position.set(150, 60, 80); satScene.add(sun);
+
+            // Scene objects
+            satScene.add(makeStars(4000, 2500));
+            satEarth = makeEarth(64); satScene.add(satEarth); applyTex(satEarth);
+            satScene.add(makeAtmo(0.055));
+
+            // Satellite model
+            satModel = new THREE.Group();
+            satModel.add(new THREE.Mesh(
+                new THREE.BoxGeometry(0.18, 0.05, 0.1),
+                new THREE.MeshPhongMaterial({ color: 0xd0d0d0, emissive: 0x181818 })
+            ));
+            const panM = new THREE.MeshPhongMaterial({ color: 0x1a3888, emissive: 0x0a1633 });
+            [-0.28, 0.28].forEach(x => {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.008, 0.09), panM);
+                p.position.x = x; satModel.add(p);
+            });
+            satScene.add(satModel);
+
+            // Instanced beam cones
+            const bGeo = new THREE.ConeGeometry(1, 1, 16, 1, true);
+            bGeo.translate(0, -0.5, 0); bGeo.rotateX(-Math.PI / 2);
+            satBeamIM = new THREE.InstancedMesh(bGeo, new THREE.MeshBasicMaterial({
+                color: 0x33aaff, transparent: true, opacity: 0.055,
+                side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+            }), MXB);
+            satBeamIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            satScene.add(satBeamIM);
+
+            // Instanced ground footprints
+            satFpIM = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 28), new THREE.MeshBasicMaterial({
+                color: 0x1155bb, transparent: true, opacity: 0.15,
+                side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+            }), MXB);
+            satFpIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            satScene.add(satFpIM);
+
+            rebuildBeams();
+        }
+
+        function rebuildBeams() {
+            if (!satScene) return;
+            const p = getP();
+            const alt = meanAlt(p);
+            const satPos = llv(40, -100, ER + alt * SC);
+
+            satModel.position.copy(satPos);
+            satModel.lookAt(0, 0, 0);
+
+            // ── Camera: orbit TARGET is the satellite itself ──
+            // Place camera offset slightly above+behind in the sat's local "up" direction
+            const satDir = satPos.clone().normalize();            // radial unit vector
+            // pick a perpendicular "behind" direction in the orbit plane
+            const sideDir = new THREE.Vector3(0, 1, 0).cross(satDir).normalize();
+            const camPos = satPos.clone()
+                .addScaledVector(satDir, 0.6)   // a little further out radially
+                .addScaledVector(sideDir, 0.4)   // offset to the side so beams are visible
+                .add(new THREE.Vector3(0, 0.25, 0));
+
+            satCam.position.copy(camPos);
+            satCtrl.target.copy(satPos);       // ← orbit AROUND the satellite
+            satCtrl.update();
+
+            // ── Beam grid ──
+            const ha = beamHA(p.gain, p.beamSize, alt);  // physical half-angle
+            const sp = ha * 2 * 0.88;                     // spacing with ~12% overlap
+            const rH = sp * Math.sqrt(3) / 2;
+            const maxA = 35 * D;
+            const rings = Math.ceil(maxA / sp) + 2;
+            const hexPts = [];
+            for (let row = -rings; row <= rings; row++) {
+                const y = row * rH;
+                const xO = (row & 1) ? sp / 2 : 0;
+                for (let col = -(rings + 1); col <= (rings + 1); col++) {
+                    const x = col * sp + xO;
+                    const r = Math.hypot(x, y);
+                    if (r <= maxA) hexPts.push({ x, y, r });
+                }
+            }
+            hexPts.sort((a, b) => a.r - b.r);
+
+            const up = satPos.clone().normalize();
+            let east = new THREE.Vector3(0, 1, 0).cross(up).normalize();
+            if (east.length() < 0.01) east.set(1, 0, 0).cross(up).normalize();
+            const north = up.clone().cross(east).normalize();
+
+            // Colour each beam individually (golden-angle hue distribution, same as orbit_v2)
+            let bi = 0;
+            const nActual = Math.min(p.beams, MXB, hexPts.length);
+            for (let i = 0; i < nActual; i++) {
+                const hp = hexPts[i];
+                const az = Math.atan2(hp.x, hp.y);
+                const sinO = Math.sin(hp.r), cosO = Math.cos(hp.r);
+                const dir = new THREE.Vector3()
+                    .addScaledVector(up, -cosO)
+                    .addScaledVector(north, sinO * Math.cos(az))
+                    .addScaledVector(east, sinO * Math.sin(az))
+                    .normalize();
+
+                const oc = satPos.dot(dir);
+                const det = oc * oc - (satPos.lengthSq() - ER * ER);
+                if (det < 0) continue;
+                const t = -oc - Math.sqrt(det);
+                if (t < 0) continue;
+
+                const gPt = satPos.clone().addScaledVector(dir, t);
+                // cone base radius at ground = tan(ha) * slant distance
+                const cR = Math.tan(ha) * t;
+
+                // Per-beam colour — golden angle hue steps, same pattern as orbit_v2.js
+                const hue = (i * 137.508) % 360;
+                const col = new THREE.Color().setHSL(hue / 360, 0.85, 0.58);
+                const fpCol = new THREE.Color().setHSL(hue / 360, 0.85, 0.38);
+
+                bDum.position.copy(satPos); bDum.lookAt(gPt);
+                bDum.scale.set(cR, cR, t); bDum.updateMatrix();
+                satBeamIM.setMatrixAt(bi, bDum.matrix);
+                satBeamIM.setColorAt(bi, col);
+
+                const gN = gPt.clone().normalize();
+                fpDum.position.copy(gPt.clone().addScaledVector(gN, 0.012));
+                fpDum.lookAt(fpDum.position.clone().add(gN));
+                fpDum.scale.set(cR, cR, 1); fpDum.updateMatrix();
+                satFpIM.setMatrixAt(bi, fpDum.matrix);
+                satFpIM.setColorAt(bi, fpCol);
+
+                bi++;
+            }
+            for (let i = bi; i < MXB; i++) {
+                satBeamIM.setMatrixAt(i, HIDE);
+                satFpIM.setMatrixAt(i, HIDE);
+            }
+            satBeamIM.instanceMatrix.needsUpdate = true;
+            satFpIM.instanceMatrix.needsUpdate = true;
+            if (satBeamIM.instanceColor) satBeamIM.instanceColor.needsUpdate = true;
+            if (satFpIM.instanceColor) satFpIM.instanceColor.needsUpdate = true;
+        }
+
+        function resizeSat() {
+            if (!satRenderer) return;
+            const c = document.getElementById('canvas-satellite');
+            const W = c.parentElement.clientWidth;
+            const H = c.parentElement.clientHeight;
+            if (!W || !H) return;
+            satCam.aspect = W / H; satCam.updateProjectionMatrix();
+            satRenderer.setSize(W, H);
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // ── ORBITAL VIEW ─────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────
+        let orbScene, orbCam, orbRenderer, orbCtrl, orbEarth, orbPlaneGroups = [], orbSatDots;
+        let orbInit = false;
+        let earthAngle = 0;
+
+        function initOrbScene() {
+            orbInit = true;
+            const canvas = document.getElementById('canvas-orbital');
+            const W = canvas.parentElement.clientWidth || 380;
+            const H = canvas.parentElement.clientHeight || 370;
+
+            orbScene = new THREE.Scene();
+            orbCam = new THREE.PerspectiveCamera(38, W / H, 0.1, 3000);
+            orbCam.position.set(0, ER * 4.2, ER * 3.8);
+
+            orbRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            orbRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+            orbRenderer.setSize(W, H);
+            orbRenderer.setClearColor(0x040609);
+
+            orbCtrl = new THREE.OrbitControls(orbCam, canvas);
+            orbCtrl.enablePan = false;
+            orbCtrl.minDistance = ER * 1.3;
+            orbCtrl.maxDistance = ER * 24;
+            orbCtrl.target.set(0, 0, 0); orbCtrl.update();
+
+            // Lights
+            orbScene.add(new THREE.AmbientLight(0x1a1a2e, 1.1));
+            const sun = new THREE.DirectionalLight(0xfff8f0, 1.4);
+            sun.position.set(250, 80, 120); orbScene.add(sun);
+
+            // Scene objects
+            orbScene.add(makeStars(6000, 3000));
+            orbEarth = makeEarth(72); orbScene.add(orbEarth); applyTex(orbEarth);
+            orbScene.add(makeAtmo(0.04));
+
+            // Equator reference line
+            const eqPts = [];
+            for (let a = 0; a <= 360; a += 3) eqPts.push(new THREE.Vector3(Math.cos(a * D) * ER, 0, Math.sin(a * D) * ER));
+            orbScene.add(new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints(eqPts),
+                new THREE.LineBasicMaterial({ color: 0x223344, transparent: true, opacity: 0.4 })
+            ));
+
+            rebuildOrbits();
+        }
+
+        function rebuildOrbits() {
+            if (!orbScene) return;
+            const p = getP();
+            const alt = meanAlt(p);
+            const orbitR = ER + alt * SC;
+            const inc = p.inc * D;
+            const nP = Math.min(p.planes, 60);
+            const nS = Math.min(p.sats, 150);
+
+            // Clear previous orbit objects
+            orbPlaneGroups.forEach(g => orbScene.remove(g));
+            orbPlaneGroups = [];
+            if (orbSatDots) { orbScene.remove(orbSatDots); orbSatDots = null; }
+
+            // Build orbit ring points template (XZ plane)
+            const ringPtsTemplate = [];
+            for (let a = 0; a <= 360; a += 2) {
+                ringPtsTemplate.push(new THREE.Vector3(Math.cos(a * D) * orbitR, 0, Math.sin(a * D) * orbitR));
+            }
+
+            const allSatPos = [];
+
+            for (let pi = 0; pi < nP; pi++) {
+                // Walker delta: RAAN distributed evenly over full 360°
+                const raan = nP > 1 ? (pi / nP) * 2 * Math.PI : 0;
+                const hex = PLANE_COLS[pi % PLANE_COLS.length];
+
+                const grp = new THREE.Group();
+                grp.rotation.order = 'YXZ';
+                grp.rotation.y = raan;
+                grp.rotation.x = inc;
+
+                // Orbit ring line
+                grp.add(new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints(ringPtsTemplate),
+                    new THREE.LineBasicMaterial({ color: hex, transparent: true, opacity: 0.6 })
+                ));
+
+                orbScene.add(grp);
+                orbPlaneGroups.push(grp);
+
+                // Satellite positions — Walker phasing offset between planes
+                const phaseOff = (pi / nP) * (2 * Math.PI / nS);
+                for (let si = 0; si < nS; si++) {
+                    const theta = (si / nS) * 2 * Math.PI + phaseOff;
+                    const localPos = new THREE.Vector3(Math.cos(theta) * orbitR, 0, Math.sin(theta) * orbitR);
+                    // Apply same YXZ euler as the group: matrix = Ry(raan) * Rx(inc)
+                    localPos.applyEuler(new THREE.Euler(inc, raan, 0, 'YXZ'));
+                    allSatPos.push(localPos);
+                }
+            }
+
+            // Satellite dots as a single Points object (efficient for large constellations)
+            const posArr = new Float32Array(allSatPos.length * 3);
+            allSatPos.forEach((v, i) => { posArr[i * 3] = v.x; posArr[i * 3 + 1] = v.y; posArr[i * 3 + 2] = v.z; });
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
+            orbSatDots = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, sizeAttenuation: true }));
+            orbScene.add(orbSatDots);
+        }
+
+        function resizeOrb() {
+            if (!orbRenderer) return;
+            const c = document.getElementById('canvas-orbital');
+            const W = c.parentElement.clientWidth;
+            const H = c.parentElement.clientHeight;
+            if (!W || !H) return;
+            orbCam.aspect = W / H; orbCam.updateProjectionMatrix();
+            orbRenderer.setSize(W, H);
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // ANIMATION LOOP
+        // ─────────────────────────────────────────────────────────────────
+        function animate() {
+            requestAnimationFrame(animate);
+            earthAngle += 0.00025;
+
+            if (activePreview === 'satellite' && satRenderer) {
+                satEarth.rotation.y = earthAngle;
+                satCtrl.update();
+                satRenderer.render(satScene, satCam);
+            }
+            if (activePreview === 'orbital' && orbRenderer) {
+                orbEarth.rotation.y = earthAngle;
+                orbCtrl.update();
+                orbRenderer.render(orbScene, orbCam);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // REACTIVE INPUT LISTENERS
+        // ─────────────────────────────────────────────────────────────────
+        ['pop-inclination', 'pop-planes', 'pop-sats-per-plane', 'pop-apogee', 'pop-perigee', 'pop-raan-spread'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', rebuildOrbits);
+        });
+        ['pop-beam-quantity', 'pop-gain', 'pop-apogee', 'pop-perigee', 'pop-beam-size'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', rebuildBeams);
+        });
+
+        // ─────────────────────────────────────────────────────────────────
+        // RESIZE OBSERVER
+        // ─────────────────────────────────────────────────────────────────
+        const ro = new ResizeObserver(() => { resizeSat(); resizeOrb(); });
+        ro.observe(document.getElementById('pview-satellite'));
+        ro.observe(document.getElementById('pview-orbital'));
+
+        // ─────────────────────────────────────────────────────────────────
+        // INIT
+        // ─────────────────────────────────────────────────────────────────
+        setTimeout(() => {
+            initSatScene();
+            animate();
+        }, 80);
+    </script>
+</body>
+
+</html>
