@@ -20,6 +20,63 @@
 </head>
 
 <body>
+    <nav class="nav-container">
+        <div class="logo-block" id="logoMenuToggle">
+            <img src="/static/icon/palatine-icon-black.svg" alt="Palatine Logo"
+                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMTQuOCA5LjJMMjIgMTJMMTQuOCAxNC44TDEyIDIyTDkuMiAxNC44TDIgMTJMOS4yIDkuMkwxMiAyWiIgZmlsbD0iYmxhY2siLz48L3N2Zz4='">
+        </div>
+
+        <!-- Logo Dropdown Menu -->
+        <div class="logo-dropdown" id="logoDropdown">
+            <div class="logo-menu-group">
+                <div class="logo-menu-label">File</div>
+                <div class="logo-menu-item" data-action="new-project">
+                    <span>New Project</span>
+                    <span class="menu-shortcut">Ctrl+N</span>
+                </div>
+                <div class="logo-menu-item" data-action="open-project">
+                    <span>Open</span>
+                    <span class="menu-shortcut">Ctrl+O</span>
+                </div>
+                <div class="logo-menu-item" data-action="save-project">
+                    <span>Save</span>
+                    <span class="menu-shortcut">Ctrl+S</span>
+                </div>
+                <div class="logo-menu-item" data-action="export">
+                    <span>Export</span>
+                    <span class="menu-shortcut">Ctrl+E</span>
+                </div>
+            </div>
+            <div class="logo-menu-divider"></div>
+            <div class="logo-menu-group">
+                <div class="logo-menu-label">Edit</div>
+                <div class="logo-menu-item" data-action="undo">
+                    <span>Undo</span>
+                    <span class="menu-shortcut">Ctrl+Z</span>
+                </div>
+                <div class="logo-menu-item" data-action="redo">
+                    <span>Redo</span>
+                    <span class="menu-shortcut">Ctrl+Y</span>
+                </div>
+            </div>
+            <div class="logo-menu-divider"></div>
+            <div class="logo-menu-item" data-action="view">
+                <span>View</span>
+            </div>
+            <div class="logo-menu-item" data-action="settings">
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <div class="nav-menus">
+            <div class="nav-item active">Space System</div>
+            <div class="nav-item inactive">Ground System</div>
+            <div class="nav-item inactive">Calculate</div>
+            <div class="nav-item inactive">Simulations</div>
+        </div>
+    </nav>
+
+    <div class="main-content">
 
     <div id="orbit-canvas-container">
         <canvas id="orbit-canvas"></canvas>
@@ -107,7 +164,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h3>Inter Satellite Links</h3>
-                        <img src="/static/icon/more1.svg" alt="More" title="More Settings">
+                        <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More" title="More Settings" style="cursor: pointer;">
                     </div>
 
                     <div class="form-row">
@@ -139,7 +196,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h3>Telecommunication</h3>
-                        <img src="/static/icon/more1.svg" alt="More" title="More Settings">
+                        <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More" title="More Settings" style="cursor: pointer;">
                     </div>
 
                     <div class="form-row">
@@ -205,6 +262,10 @@
                         <div class="color-box box-borders toggled-off"></div>
                         <span>Geo Borders</span>
                     </div>
+                    <div class="list-item">
+                        <div class="color-box box-latlon toggled-off"></div>
+                        <span>Lat/Lon Grid</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -220,7 +281,7 @@
                 </div>
 
                 <div class="action-group">
-                    <button class="btn btn-focus" id="focusBtn">
+                    <button class="btn btn-focus" id="focusBtn" disabled>
                         Focus
                         <svg class="focus-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14"
                             height="14">
@@ -228,8 +289,7 @@
                             <circle cx="12" cy="12" r="3" fill="currentColor" />
                         </svg>
                     </button>
-                    <button class="btn btn-delete">Delete</button>
-                    <button class="btn btn-reset">Reset</button>
+                    <button class="btn btn-delete" id="deleteBtn" disabled>Delete</button>
                     <button class="btn btn-push">
                         Push
                         <svg class="arrow-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -273,16 +333,708 @@
         </div>
     </div>
 
+    </div>
+
     <!-- Advanced Settings Modal -->
-    <div id="advancedSettingsModal" class="modal-iframe-overlay" style="display: none;">
-        <div class="modal-iframe-container">
-            <iframe id="advancedSettingsIframe" src="/test-advanced"></iframe>
+    <div id="advancedSettingsModal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+
+            <!-- Title Bar -->
+            <div class="modal-titlebar">
+                <span class="modal-title">Add Constellation</span>
+                <div class="titlebar-controls">
+                    <button class="titlebar-btn"><img src="/static/icon/buttonMinimize.svg" alt="Minimize"></button>
+                    <button class="titlebar-btn"><img src="/static/icon/buttonRestore.svg" alt="Restore"></button>
+                    <button class="titlebar-btn"
+                        onclick="document.querySelector('.modal-overlay').style.display='none'"><img
+                            src="/static/icon/buttonClose.svg" alt="Close"></button>
+                </div>
+            </div>
+
+            <!-- Tab Row -->
+            <div class="tab-row">
+                <div class="tab active" data-tab="orbit">Orbit</div>
+                <div class="tab" data-tab="payload">Payload</div>
+                <div class="tab" data-tab="bus">Bus</div>
+                <div class="tab-spacer"></div>
+                <div class="tab-divider"></div>
+                <div class="tab preview-tab-main active" data-preview="satellite">Single Satellite Preview</div>
+                <div class="tab preview-tab-main" data-preview="orbital">Orbital View</div>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+
+                <!-- Left Pane -->
+                <div class="left-pane">
+
+                    <!-- Constellation Name -->
+                    <div class="constellation-name-block">
+                        <div class="constellation-name-label">Constellation Name</div>
+                        <input class="constellation-name-input" type="text" placeholder="Untitled">
+                    </div>
+
+                    <!-- Scrollable Settings -->
+                    <div class="settings-scroll">
+                        <div class="settings-inner">
+
+                            <!-- ═══════════════ ORBIT TAB ═══════════════ -->
+                            <div class="tab-panel active" id="panel-orbit">
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Orbital Parameters <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Defines the shape and orientation of the satellite's
+                                            orbit around Earth — altitude, inclination, plane count, and distribution of
+                                            satellites.</div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <span class="form-label">Inclination (deg)</span>
+                                        <input type="text" class="form-input" id="pop-inclination" value="53">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Orbital Planes</span>
+                                        <input type="text" class="form-input" id="pop-planes" value="20">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Sats per Plane</span>
+                                        <input type="text" class="form-input" id="pop-sats-per-plane" value="22">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Symmetric Orbit</span>
+                                        <label class="switch"><input type="checkbox" id="sym-toggle" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="sub-group">
+                                        <div class="form-row">
+                                            <span class="form-label">Apogee (km)</span>
+                                            <input type="text" class="form-input" id="pop-apogee" value="550">
+                                        </div>
+                                        <div class="fields-group" id="perigee-fields">
+                                            <div class="form-row" style="margin-top:5px;">
+                                                <span class="form-label">Perigee (km)</span>
+                                                <input type="text" class="form-input" id="pop-perigee" value="550">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Eccentricity</span>
+                                        <input type="text" class="form-input" value="0.0001">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">RAAN Spread (deg)</span>
+                                        <input type="text" class="form-input" id="pop-raan-spread" value="15">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Argument of Perigee (deg)</span>
+                                        <input type="text" class="form-input" value="0">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">True Anomaly (deg)</span>
+                                        <input type="text" class="form-input" value="0">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Lifecycle <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Defines the satellite's operational lifetime, planned
+                                            deorbit altitude, and how many phasing orbits are used during deployment.
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Orbit Decay (Years)</span>
+                                        <input type="text" class="form-input" value="5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Design Lifetime (Years)</span>
+                                        <input type="text" class="form-input" value="7">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Disposal Altitude (km)</span>
+                                        <input type="text" class="form-input" value="400">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Phasing Orbits</span>
+                                        <input type="text" class="form-input" value="2">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Propagation <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Controls how the orbital state is simulated over time.
+                                            SGP4 is standard for LEO TLEs; numerical propagators offer higher fidelity
+                                            with configurable drag and solar pressure models.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propagator</span>
+                                        <select class="form-input">
+                                            <option selected>SGP4</option>
+                                            <option>J2</option>
+                                            <option>Numerical</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Drag Model</span>
+                                        <select class="form-input">
+                                            <option selected>NRLMSISE-00</option>
+                                            <option>JB2008</option>
+                                            <option>Exponential</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Ballistic Coeff. (kg/m²)</span>
+                                        <input type="text" class="form-input" value="50">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Solar Pressure Coeff.</span>
+                                        <input type="text" class="form-input" value="1.3">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Step Size (s)</span>
+                                        <input type="text" class="form-input" value="60">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Station Keeping <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Station keeping uses onboard thrusters to correct
+                                            orbital drift caused by atmospheric drag, solar pressure, and gravitational
+                                            perturbations, keeping each satellite in its assigned slot.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Enable SK</span>
+                                        <label class="switch"><input type="checkbox" id="sk-toggle" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="fields-group" id="sk-fields">
+                                        <div class="form-row">
+                                            <span class="form-label">East-West Deadband (deg)</span>
+                                            <input type="text" class="form-input" value="0.05">
+                                        </div>
+                                        <div class="form-row">
+                                            <span class="form-label">North-South Deadband (deg)</span>
+                                            <input type="text" class="form-input" value="0.05">
+                                        </div>
+                                        <div class="form-row">
+                                            <span class="form-label">Δv Budget (m/s/yr)</span>
+                                            <input type="text" class="form-input" value="50">
+                                        </div>
+                                        <div class="form-row">
+                                            <span class="form-label">Thruster Type</span>
+                                            <select class="form-input">
+                                                <option selected>Hall-Effect</option>
+                                                <option>Ion</option>
+                                                <option>Cold Gas</option>
+                                                <option>Chemical</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div><!-- /panel-orbit -->
+
+                            <!-- ═══════════════ PAYLOAD TAB ═══════════════ -->
+                            <div class="tab-panel" id="panel-payload">
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">User Beam <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Configures the downlink spot beams projected onto
+                                            Earth's surface — quantity, footprint size, frequency reuse pattern, and
+                                            whether beams can hop dynamically between zones.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Quantity</span>
+                                        <input type="text" class="form-input" id="pop-beam-quantity" value="24">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Size (km)</span>
+                                        <input type="text" class="form-input" id="pop-beam-size" value="300">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Colours (Frequency Reuse)</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Scan Angle (deg)</span>
+                                        <input type="text" class="form-input" value="60">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Beam Hopping</span>
+                                        <label class="switch"><input type="checkbox"><span
+                                                class="slider"></span></label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">RF Link Budget <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Sets the radio frequency parameters for the user link —
+                                            transmit power, antenna gain, noise figure (G/T), and polarisation scheme —
+                                            used to compute C/N₀ and link margin.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Frequency Band</span>
+                                        <select class="form-input">
+                                            <option>Ka (26.5–40 GHz)</option>
+                                            <option selected>Ku (12–18 GHz)</option>
+                                            <option>Q/V (40–75 GHz)</option>
+                                            <option>L (1–2 GHz)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Downlink Frequency (GHz)</span>
+                                        <input type="text" class="form-input" value="12.5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Uplink Frequency (GHz)</span>
+                                        <input type="text" class="form-input" value="14.25">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Tx Power / EIRP (dBW)</span>
+                                        <input type="text" class="form-input" value="35">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Antenna Gain (dB)</span>
+                                        <input type="text" class="form-input" id="pop-gain" value="45">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">G/T (dB/K)</span>
+                                        <input type="text" class="form-input" value="8.5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Polarisation</span>
+                                        <select class="form-input">
+                                            <option selected>RHCP / LHCP</option>
+                                            <option>Linear H/V</option>
+                                            <option>Dual Linear</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Capacity & Throughput <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Defines the aggregate data capacity of the satellite,
+                                            driven by available bandwidth, spectral efficiency, modulation order, and
+                                            forward error correction (FEC) coding rate.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Total Throughput (Gbps)</span>
+                                        <input type="text" class="form-input" value="100">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Bandwidth per Beam (MHz)</span>
+                                        <input type="text" class="form-input" value="500">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Spectral Efficiency (b/s/Hz)</span>
+                                        <input type="text" class="form-input" value="4.0">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Modulation</span>
+                                        <select class="form-input">
+                                            <option>BPSK</option>
+                                            <option>QPSK</option>
+                                            <option selected>16-APSK</option>
+                                            <option>32-APSK</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">FEC Rate</span>
+                                        <select class="form-input">
+                                            <option>1/2</option>
+                                            <option>2/3</option>
+                                            <option selected>3/4</option>
+                                            <option>5/6</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Inter-Satellite Links <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">ISLs connect satellites directly to each other without
+                                            routing through a ground station, enabling low-latency mesh networking
+                                            across the constellation via optical or RF crosslinks.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">ISL Type</span>
+                                        <select class="form-input">
+                                            <option selected>Laser (OCA)</option>
+                                            <option>RF</option>
+                                            <option>Microwave</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">ISL Tx Capacity (Gbps)</span>
+                                        <input type="text" class="form-input" value="100">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Lasers per Satellite</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Max ISL Range (km)</span>
+                                        <input type="text" class="form-input" value="5000">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Inter-plane ISL</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Intra-plane ISL</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Gateway / Feeder Link <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The feeder link connects the satellite to ground
+                                            gateways, carrying aggregated user traffic to the internet backbone.
+                                            Capacity and minimum elevation angle determine gateway density.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Backhaul Tx Capacity (Gbps)</span>
+                                        <input type="text" class="form-input" value="20">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Up Backhaul Quantity</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Feeder Frequency (GHz)</span>
+                                        <input type="text" class="form-input" value="19.7">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Min Elev. Angle (deg)</span>
+                                        <input type="text" class="form-input" value="10">
+                                    </div>
+                                </div>
+
+                            </div><!-- /panel-payload -->
+
+                            <!-- ═══════════════ BUS TAB ═══════════════ -->
+                            <div class="tab-panel" id="panel-bus">
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Physical Properties <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Mass and geometry of the satellite bus. Dry mass
+                                            excludes propellant; launch mass is the total. Frontal area directly affects
+                                            atmospheric drag at low altitudes.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Dry Mass (kg)</span>
+                                        <input type="text" class="form-input" value="260">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propellant Mass (kg)</span>
+                                        <input type="text" class="form-input" value="40">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Launch Mass (kg)</span>
+                                        <input type="text" class="form-input" value="300">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Body Dimensions (m)</span>
+                                        <input type="text" class="form-input" value="1.2×0.9×0.7">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Frontal Area (m²)</span>
+                                        <input type="text" class="form-input" value="1.08">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Power System <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Solar arrays generate primary power; batteries sustain
+                                            operations during eclipse. End-of-life power accounts for solar cell
+                                            degradation over the mission lifetime.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Solar Array Power (W)</span>
+                                        <input type="text" class="form-input" value="3500">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">End-of-Life Power (W)</span>
+                                        <input type="text" class="form-input" value="2800">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Battery Capacity (Wh)</span>
+                                        <input type="text" class="form-input" value="800">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Battery Chemistry</span>
+                                        <select class="form-input">
+                                            <option selected>Li-Ion</option>
+                                            <option>LiPo</option>
+                                            <option>NiH₂</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Payload Power Draw (W)</span>
+                                        <input type="text" class="form-input" value="1800">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Attitude Control (ADCS) <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The ADCS keeps the satellite precisely oriented —
+                                            pointing antennas at Earth and solar panels at the Sun. Reaction wheels
+                                            provide fine torque; magnetorquers offload momentum buildup.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">ADCS Type</span>
+                                        <select class="form-input">
+                                            <option selected>3-Axis Stabilised</option>
+                                            <option>Gravity Gradient</option>
+                                            <option>Spin Stabilised</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Pointing Accuracy (arcsec)</span>
+                                        <input type="text" class="form-input" value="30">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Reaction Wheel Count</span>
+                                        <input type="text" class="form-input" value="4">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Star Tracker</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Magnetorquers</span>
+                                        <label class="switch"><input type="checkbox" checked><span
+                                                class="slider"></span></label>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Propulsion <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The propulsion system executes orbit raise, station
+                                            keeping, collision avoidance, and deorbit manoeuvres. Specific impulse (Isp)
+                                            indicates fuel efficiency; higher Isp means less propellant mass needed.
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propulsion Type</span>
+                                        <select class="form-input">
+                                            <option selected>Hall-Effect Ion</option>
+                                            <option>Gridded Ion</option>
+                                            <option>Cold Gas</option>
+                                            <option>Monopropellant</option>
+                                            <option>Bipropellant</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Specific Impulse (s)</span>
+                                        <input type="text" class="form-input" value="1600">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Thrust (mN)</span>
+                                        <input type="text" class="form-input" value="180">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Propellant</span>
+                                        <select class="form-input">
+                                            <option selected>Xenon</option>
+                                            <option>Krypton</option>
+                                            <option>Argon</option>
+                                            <option>Hydrazine</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">Thermal Control <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">Manages the extreme temperature swings of the space
+                                            environment (-150 °C to +120 °C). Passive systems use coatings and
+                                            radiators; heat pipes spread hotspots; active heaters prevent cold soak.
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Thermal Control Type</span>
+                                        <select class="form-input">
+                                            <option selected>Passive + Heat Pipes</option>
+                                            <option>Passive Only</option>
+                                            <option>Active Heaters</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Radiator Area (m²)</span>
+                                        <input type="text" class="form-input" value="1.5">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Op. Temp Range (°C)</span>
+                                        <input type="text" class="form-input" value="-20 / +55">
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <div class="settings-section-title">On-Board Computer <span class="title-info"
+                                            tabindex="0">i</span>
+                                        <div class="tooltip-box">The OBC is the satellite's central processor — running
+                                            flight software, managing telemetry, and coordinating all subsystems.
+                                            Radiation tolerance is critical for long LEO missions above the Van Allen
+                                            belts.</div>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">OBC Architecture</span>
+                                        <select class="form-input">
+                                            <option selected>ARM Cortex-R</option>
+                                            <option>RISC-V</option>
+                                            <option>FPGA-based</option>
+                                            <option>Rad-Hard SPARC</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Processing Power (MIPS)</span>
+                                        <input type="text" class="form-input" value="800">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Mass Memory (GB)</span>
+                                        <input type="text" class="form-input" value="512">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Radiation Tolerance (krad)</span>
+                                        <input type="text" class="form-input" value="100">
+                                    </div>
+                                    <div class="form-row">
+                                        <span class="form-label">Redundancy</span>
+                                        <select class="form-input">
+                                            <option>None</option>
+                                            <option selected>Cold Redundant</option>
+                                            <option>Hot Redundant</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                            </div><!-- /panel-bus -->
+
+                        </div><!-- /settings-inner -->
+                    </div><!-- /settings-scroll -->
+                </div><!-- /left-pane -->
+
+                <!-- Right Pane -->
+                <div class="right-pane">
+                    <div class="preview-area">
+                        <div class="preview-panel active" id="pview-satellite">
+                            <canvas id="canvas-satellite"></canvas>
+                        </div>
+                        <div class="preview-panel" id="pview-orbital">
+                            <canvas id="canvas-orbital"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /modal-body -->
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button class="btn btn-cancel">Cancel</button>
+                <button class="btn btn-reset">Reset</button>
+                <button class="btn btn-save" id="advancedSaveBtn">
+                    Save
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+
+        </div><!-- /modal -->
+    </div><!-- /overlay -->
+
+    <!-- Open Project Modal -->
+    <div id="openProjectModal" class="project-modal-overlay" style="display: none;">
+        <div class="project-modal">
+            <div class="project-modal-header">
+                <span class="project-modal-title">Open Project</span>
+                <button class="project-modal-close" id="closeOpenModal">&times;</button>
+            </div>
+            <div class="project-modal-body">
+                <div class="project-list" id="projectList">
+                    <div class="project-list-loading">Loading projects...</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Custom Scripts -->
     <script src="/static/js/orbit_v2.js"></script>
     <script src="/static/js/app.js"></script>
+    <script src="/static/js/session.js"></script>
+    <script>
+        // Navigation bar interactivity
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', function () {
+                // Reset all items to inactive state
+                navItems.forEach(nav => {
+                    nav.classList.remove('active');
+                    nav.classList.add('inactive');
+                });
+                // Set clicked item to active state
+                this.classList.remove('inactive');
+                this.classList.add('active');
+            });
+        });
+
+        // Logo dropdown menu toggle
+        const logoToggle = document.getElementById('logoMenuToggle');
+        const logoDropdown = document.getElementById('logoDropdown');
+
+        logoToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            logoDropdown.classList.toggle('open');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!logoDropdown.contains(e.target) && !logoToggle.contains(e.target)) {
+                logoDropdown.classList.remove('open');
+            }
+        });
+
+        // Close dropdown on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                logoDropdown.classList.remove('open');
+            }
+        });
+
+        // Menu item click handlers wired to SessionManager
+        document.querySelectorAll('.logo-menu-item').forEach(item => {
+            item.addEventListener('click', function () {
+                const action = this.getAttribute('data-action');
+                logoDropdown.classList.remove('open');
+
+                if (window.SessionManager) {
+                    switch (action) {
+                        case 'new-project':  SessionManager.newProject(); break;
+                        case 'open-project': SessionManager.showOpenDialog(); break;
+                        case 'save-project': SessionManager.saveProject(); break;
+                        case 'export':       SessionManager.exportProject(); break;
+                        default: console.log('Menu action (no handler):', action);
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

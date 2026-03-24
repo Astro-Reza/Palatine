@@ -158,7 +158,10 @@ class Constellation {
                     dummy.lookAt(earthCenter);
                     const dist = this.orbitRadius - 5;
 
-                    const beamRadiusKm = this.settings.beamSize / 2;
+                    let beamRadiusKm = this.settings.beamSize / 2;
+                    if (!isFocusActive) {
+                        beamRadiusKm *= Math.sqrt(this.settings.beamQuantity || 1);
+                    }
                     const altitudeKm = this.avgAltitude;
                     const angle = Math.atan(beamRadiusKm / altitudeKm);
 
@@ -177,76 +180,146 @@ class Constellation {
     }
     update3DOrbits() {
         if (!this.orbitGroup) return;
-        while (this.orbitGroup.children.length > 0) this.orbitGroup.remove(this.orbitGroup.children[0]);
+        while (this.orbitGroup.children.length > 0) {
+            const child = this.orbitGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            this.orbitGroup.remove(child);
+        }
+
+        const showAsc = this.parent.layers.ascending;
+        const showDesc = this.parent.layers.descending;
+        if (!showAsc && !showDesc) return;
 
         const numPlanes = this.settings.planes;
         const inclination = (this.settings.inclination * Math.PI) / 180;
-        const steps = 64;
+        const steps = 128;
+        const ascColor = new THREE.Color(0xcce971);
+        const descColor = new THREE.Color(0xffcc00);
 
         for (let p = 0; p < numPlanes; p++) {
             const raan = (p / numPlanes) * 2 * Math.PI;
-            const hue = (p / numPlanes) * 60 + 170;
-            const color = new THREE.Color(`hsl(${hue}, 70%, 50%)`);
+            let ascPts = [], descPts = [];
 
-            const points = [];
             for (let i = 0; i <= steps; i++) {
-                const anomaly = (i / steps) * 2 * Math.PI;
+                // Shift phase by -PI/2 so ascending (-PI/2 to PI/2) is contiguous
+                const anomaly = ((i / steps) * 2 * Math.PI) - (Math.PI / 2);
                 const sinLat = Math.sin(inclination) * Math.sin(anomaly);
                 const lat = Math.asin(Math.max(-1, Math.min(1, sinLat)));
                 const yArg = Math.cos(inclination) * Math.sin(anomaly);
                 const xArg = Math.cos(anomaly);
                 const lon = Math.atan2(yArg, xArg) + raan;
-                points.push(this.parent.latLonToVector3((lat * 180) / Math.PI, (lon * 180) / Math.PI, this.orbitRadius));
+                const latDeg = (lat * 180) / Math.PI;
+                const lonDeg = (lon * 180) / Math.PI;
+                const v = this.parent.latLonToVector3(latDeg, lonDeg, this.orbitRadius);
+
+                if (Math.cos(anomaly) > 0) ascPts.push(v);
+                else descPts.push(v);
             }
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({ color: color, opacity: 0.2, transparent: true });
-            this.orbitGroup.add(new THREE.Line(geometry, material));
+
+            if (showAsc && ascPts.length > 1) {
+                const g = new THREE.BufferGeometry().setFromPoints(ascPts);
+                this.orbitGroup.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: ascColor, opacity: 0.5, transparent: true })));
+            }
+            if (showDesc && descPts.length > 1) {
+                const g = new THREE.BufferGeometry().setFromPoints(descPts);
+                this.orbitGroup.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: descColor, opacity: 0.5, transparent: true })));
+            }
         }
     }
 
     draw2D(ctx, timeOffset) {
         if (!this.visible) return;
 
-        // Draw Orbits
-        if (this.parent.layers.ascending || this.parent.layers.descending) {
+        // Draw Orbits — split by ascending / descending
+        const showAsc = this.parent.layers.ascending;
+        const showDesc = this.parent.layers.descending;
+        if (showAsc || showDesc) {
             const numPlanes = this.settings.planes;
             const inclination = (this.settings.inclination * Math.PI) / 180;
             const steps = 128;
             ctx.lineWidth = 1;
+            const ascColor = '#cce971';
+            const descColor = '#ffcc00';
+            const W = window.innerWidth;
 
             for (let p = 0; p < numPlanes; p++) {
                 const raan = (p / numPlanes) * 2 * Math.PI;
-                const hue = (p / numPlanes) * 60 + 170;
-                ctx.strokeStyle = `hsla(${hue}, 70%, 50%, 0.3)`;
-                ctx.beginPath();
+                let ascPts = [], descPts = [];
+                let prevXA = -9999, prevXD = -9999;
 
-                let prevLon = null;
                 for (let i = 0; i <= steps; i++) {
-                    const anomaly = (i / steps) * 2 * Math.PI;
+                    // Shift phase by -PI/2 so ascending half is contiguous
+                    const anomaly = ((i / steps) * 2 * Math.PI) - (Math.PI / 2);
                     const sinLat = Math.sin(inclination) * Math.sin(anomaly);
                     const lat = Math.asin(Math.max(-1, Math.min(1, sinLat)));
                     const yArg = Math.cos(inclination) * Math.sin(anomaly);
                     const xArg = Math.cos(anomaly);
-                    const lon = Math.atan2(yArg, xArg) + raan;
+                    let lon = Math.atan2(yArg, xArg) + raan;
+                    lon = (lon + Math.PI) % (2 * Math.PI) - Math.PI;
 
                     let lonDeg = (lon * 180) / Math.PI;
                     let latDeg = (lat * 180) / Math.PI;
                     lonDeg = ((lonDeg + 180) % 360 + 360) % 360 - 180;
 
                     const xy = this.parent.latLonToXY(latDeg, lonDeg);
+                    const isAsc = Math.cos(anomaly) > 0;
 
-                    if (i === 0) {
-                        ctx.moveTo(xy.x, xy.y);
-                    } else {
-                        if (prevLon !== null && Math.abs(lonDeg - prevLon) > 180) {
-                            ctx.moveTo(xy.x, xy.y);
-                        } else {
-                            ctx.lineTo(xy.x, xy.y);
+                    if (isAsc) {
+                        // Flush descending segment
+                        if (showDesc && descPts.length > 1) {
+                            ctx.strokeStyle = descColor; ctx.globalAlpha = 0.6; ctx.beginPath();
+                            ctx.moveTo(descPts[0][0], descPts[0][1]);
+                            for (let k = 1; k < descPts.length; k++) ctx.lineTo(descPts[k][0], descPts[k][1]);
+                            ctx.stroke(); ctx.globalAlpha = 1;
                         }
+                        descPts = []; prevXD = -9999;
+                        // Break ascending on anti-meridian wrap
+                        if (Math.abs(xy.x - prevXA) > W / 2 && prevXA !== -9999) {
+                            if (showAsc && ascPts.length > 1) {
+                                ctx.strokeStyle = ascColor; ctx.globalAlpha = 0.6; ctx.beginPath();
+                                ctx.moveTo(ascPts[0][0], ascPts[0][1]);
+                                for (let k = 1; k < ascPts.length; k++) ctx.lineTo(ascPts[k][0], ascPts[k][1]);
+                                ctx.stroke(); ctx.globalAlpha = 1;
+                            }
+                            ascPts = [];
+                        }
+                        ascPts.push([xy.x, xy.y]); prevXA = xy.x;
+                    } else {
+                        // Flush ascending segment
+                        if (showAsc && ascPts.length > 1) {
+                            ctx.strokeStyle = ascColor; ctx.globalAlpha = 0.6; ctx.beginPath();
+                            ctx.moveTo(ascPts[0][0], ascPts[0][1]);
+                            for (let k = 1; k < ascPts.length; k++) ctx.lineTo(ascPts[k][0], ascPts[k][1]);
+                            ctx.stroke(); ctx.globalAlpha = 1;
+                        }
+                        ascPts = []; prevXA = -9999;
+                        // Break descending on anti-meridian wrap
+                        if (Math.abs(xy.x - prevXD) > W / 2 && prevXD !== -9999) {
+                            if (showDesc && descPts.length > 1) {
+                                ctx.strokeStyle = descColor; ctx.globalAlpha = 0.6; ctx.beginPath();
+                                ctx.moveTo(descPts[0][0], descPts[0][1]);
+                                for (let k = 1; k < descPts.length; k++) ctx.lineTo(descPts[k][0], descPts[k][1]);
+                                ctx.stroke(); ctx.globalAlpha = 1;
+                            }
+                            descPts = [];
+                        }
+                        descPts.push([xy.x, xy.y]); prevXD = xy.x;
                     }
-                    prevLon = lonDeg;
                 }
-                ctx.stroke();
+                // Flush remaining segments
+                if (showAsc && ascPts.length > 1) {
+                    ctx.strokeStyle = ascColor; ctx.globalAlpha = 0.6; ctx.beginPath();
+                    ctx.moveTo(ascPts[0][0], ascPts[0][1]);
+                    for (let k = 1; k < ascPts.length; k++) ctx.lineTo(ascPts[k][0], ascPts[k][1]);
+                    ctx.stroke(); ctx.globalAlpha = 1;
+                }
+                if (showDesc && descPts.length > 1) {
+                    ctx.strokeStyle = descColor; ctx.globalAlpha = 0.6; ctx.beginPath();
+                    ctx.moveTo(descPts[0][0], descPts[0][1]);
+                    for (let k = 1; k < descPts.length; k++) ctx.lineTo(descPts[k][0], descPts[k][1]);
+                    ctx.stroke(); ctx.globalAlpha = 1;
+                }
             }
         }
 
@@ -280,7 +353,8 @@ class OrbitManager {
             descending: true,
             intra: true,
             inter: true,
-            borders: false
+            borders: false,
+            latLonGrid: false
         };
 
         this.boundaryData = null;
@@ -394,7 +468,18 @@ class OrbitManager {
         } else {
             this.scene.add(this.boundaryGroup);
         }
+
+        // Lat/Lon Grid
+        this.latLonGroup = new THREE.Group();
+        this.latLonGroup.visible = false;
+        if (this.earthMesh) {
+            this.earthMesh.add(this.latLonGroup);
+        } else {
+            this.scene.add(this.latLonGroup);
+        }
+
         this.loadBoundaries();
+        this.buildLatLonGrid();
     }
 
     async loadBoundaries() {
@@ -450,14 +535,46 @@ class OrbitManager {
             const lon = coord[0];
             const lat = coord[1];
 
-            // Radius 5.02 ensures the lines float just above your Earth mesh (radius 5.0)
-            const vec = this.latLonToVector3(lat, lon, 5.02);
+            // Radius 5.002 ensures the lines float just above your Earth mesh (radius 5.0)
+            const vec = this.latLonToVector3(lat, lon, 5.002);
             points.push(vec);
         });
 
         const geo = new THREE.BufferGeometry().setFromPoints(points);
         const line = new THREE.Line(geo, material);
         this.boundaryGroup.add(line);
+    }
+
+    buildLatLonGrid() {
+        const material = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            opacity: 0.15,
+            transparent: true,
+            depthWrite: false
+        });
+
+        const radius = 5.001; // Slightly above the earth mesh
+        const segments = 64;
+
+        // Latitudes (every 10 degrees)
+        for (let lat = -80; lat <= 80; lat += 10) {
+            const points = [];
+            for (let lon = -180; lon <= 180; lon += 360 / segments) {
+                points.push(this.latLonToVector3(lat, lon, radius));
+            }
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            this.latLonGroup.add(new THREE.Line(geo, material));
+        }
+
+        // Longitudes (every 10 degrees)
+        for (let lon = -180; lon < 180; lon += 10) {
+            const points = [];
+            for (let lat = -90; lat <= 90; lat += 180 / segments) {
+                points.push(this.latLonToVector3(lat, lon, radius));
+            }
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            this.latLonGroup.add(new THREE.Line(geo, material));
+        }
     }
 
     initMultiBeam() {
@@ -523,13 +640,22 @@ class OrbitManager {
     }
 
     removeConstellation(index) {
+        if (index < 0 || index >= this.constellations.length) return;
+        
         const c = this.constellations[index];
-        if (c) {
+        if (this.scene) {
             this.scene.remove(c.satPoints);
             this.scene.remove(c.orbitGroup);
             this.scene.remove(c.beamMesh);
-            this.constellations.splice(index, 1);
         }
+        
+        if (this.focusedSat && this.focusedSat.constellation === c) {
+            this.focusOnSatellite(); // This will turn off focus
+        }
+        
+        this.constellations.splice(index, 1);
+        // If in 2D mode, redraw to reflect the change immediately
+        if (this.mode === '2D') this.draw2D();
     }
 
     toggleConstellationVisibility(index) {
@@ -541,6 +667,10 @@ class OrbitManager {
     toggleLayer(layer, state) {
         if (this.layers.hasOwnProperty(layer)) {
             this.layers[layer] = state;
+            // Rebuild 3D orbits when ascending/descending toggles change
+            if (layer === 'ascending' || layer === 'descending') {
+                this.constellations.forEach(c => c.update3DOrbits());
+            }
         }
     }
 
@@ -556,7 +686,7 @@ class OrbitManager {
         this.handleResize();
     }
 
-    focusOnSatellite() {
+    focusOnSatellite(constellationIndex = null) {
         if (this.focusedSat) {
             // Turning OFF focus
             this.focusedSat = null;
@@ -568,9 +698,15 @@ class OrbitManager {
 
         if (this.constellations.length === 0) return false;
 
-        // Pick a random constellation and satellite
-        const constellation = this.constellations[Math.floor(Math.random() * this.constellations.length)];
-        const satIndex = Math.floor(Math.random() * constellation.totalSats);
+        let constellation, satIndex;
+        if (constellationIndex !== null && this.constellations[constellationIndex]) {
+            constellation = this.constellations[constellationIndex];
+            satIndex = Math.floor(Math.random() * constellation.totalSats);
+        } else {
+            // Pick a random constellation and satellite
+            constellation = this.constellations[Math.floor(Math.random() * this.constellations.length)];
+            satIndex = Math.floor(Math.random() * constellation.totalSats);
+        }
 
         this.focusedSat = { constellation, index: satIndex };
 
@@ -619,26 +755,30 @@ class OrbitManager {
         this.lastFrameTime = timestamp;
 
         if (!this.isPaused) {
-            const baseSpeed = 0.0001;
             if (this.syncUTC) {
-                // Approximate UTC alignment
-                this.timeOffset = (Date.now() / 1000) * baseSpeed;
+                // timeOffset represents real-world seconds since epoch
+                this.timeOffset = Date.now() / 1000;
             } else {
-                this.timeOffset += (delta * baseSpeed * this.timeMultiplier);
+                // timeOffset is simulated seconds elapsed
+                this.timeOffset += (delta / 1000) * this.timeMultiplier;
             }
         }
+
+        // Calculate unified satellite angle (1 orbit = 5400s)
+        const satAngle = this.timeOffset * (2 * Math.PI / 5400);
 
         // Update UI
         this.updateUI();
 
         if (this.mode === '3D') {
-            this.constellations.forEach(c => c.update3D(this.timeOffset));
+            this.constellations.forEach(c => c.update3D(satAngle));
             if (this.earthMesh) {
-                this.earthMesh.rotation.y = this.timeOffset * 0.2;
+                // Earth rotates 1 full turn per 86400 seconds
+                this.earthMesh.rotation.y = this.timeOffset * (2 * Math.PI / 86400);
             }
 
             if (this.focusedSat) {
-                const pos = this.focusedSat.constellation.getSatellitePosition(this.focusedSat.index, this.timeOffset);
+                const pos = this.focusedSat.constellation.getSatellitePosition(this.focusedSat.index, satAngle);
                 const vec3 = this.latLonToVector3(pos.lat, pos.lon, this.focusedSat.constellation.orbitRadius);
 
                 // Follow the satellite by moving camera by the same delta as target
@@ -661,6 +801,12 @@ class OrbitManager {
                 }
             }
 
+            if (this.latLonGroup) {
+                if (this.latLonGroup.visible !== this.layers.latLonGrid) {
+                    this.latLonGroup.visible = this.layers.latLonGrid;
+                }
+            }
+
             this.controls.update();
             this.renderer.render(this.scene, this.camera);
         } else {
@@ -677,7 +823,11 @@ class OrbitManager {
                 this.draw2DBoundaries();
             }
 
-            this.constellations.forEach(c => c.draw2D(this.ctx, this.timeOffset));
+            if (this.layers.latLonGrid) {
+                this.draw2DLatLonGrid();
+            }
+
+            this.constellations.forEach(c => c.draw2D(this.ctx, satAngle));
         }
 
         requestAnimationFrame((t) => this.animate(t));
@@ -726,6 +876,31 @@ class OrbitManager {
             prevLon = lon;
         });
         this.ctx.stroke();
+    }
+
+    draw2DLatLonGrid() {
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 1;
+        this.ctx.globalAlpha = 0.15;
+        this.ctx.beginPath();
+        
+        // Latitudes
+        for (let lat = -80; lat <= 80; lat += 10) {
+            const xy1 = this.latLonToXY(lat, -180);
+            const xy2 = this.latLonToXY(lat, 180);
+            this.ctx.moveTo(xy1.x, xy1.y);
+            this.ctx.lineTo(xy2.x, xy2.y);
+        }
+        
+        // Longitudes
+        for (let lon = -180; lon <= 180; lon += 10) {
+            const xy1 = this.latLonToXY(-90, lon);
+            const xy2 = this.latLonToXY(90, lon);
+            this.ctx.moveTo(xy1.x, xy1.y);
+            this.ctx.lineTo(xy2.x, xy2.y);
+        }
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0;
     }
 
     updateMultiBeam(satPos, constellation) {
@@ -858,10 +1033,11 @@ class OrbitManager {
             if (this.syncUTC) {
                 timeDisplay.textContent = new Date().toUTCString().split(' ')[4];
             } else {
-                const totalSeconds = Math.floor(this.timeOffset * 10000); // Scale back to "relative seconds"
-                const mins = Math.floor(totalSeconds / 60);
+                const totalSeconds = Math.floor(this.timeOffset);
+                const hrs = Math.floor(totalSeconds / 3600);
+                const mins = Math.floor((totalSeconds % 3600) / 60);
                 const secs = totalSeconds % 60;
-                timeDisplay.textContent = `T+ ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                timeDisplay.textContent = `T+ ${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
         }
 
@@ -889,7 +1065,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'box-descending': 'descending',
         'box-intra': 'intra',
         'box-inter': 'inter',
-        'box-borders': 'borders'
+        'box-borders': 'borders',
+        'box-latlon': 'latLonGrid'
     };
 
     // 2. Select all the color boxes inside the View Settings menu
