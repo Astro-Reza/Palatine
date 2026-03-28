@@ -1,6 +1,6 @@
 # 🛰️ LICENSE - Palatine 2.0
 
-**Copyright (c) 2026 Astro-Reza. All Rights Reserved.**
+**Copyright (c) 2026 Palatine Technologies. All Rights Reserved.**
 
 This license agreement (the "License") is a legal agreement between you (the "Licensee") and the author, **Astro-Reza** (the "Licensor"), for the software product **Palatine 2.0** (the "Software").
 

@@ -1,0 +1,7 @@
+# Specific HTML files to exclude
+nav-bar.html
+slider.html
+constellation-list.html
+
+# Exclude the entire System Prompt folder
+System Prompt/

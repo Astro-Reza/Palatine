@@ -39,26 +39,6 @@
 | **Data Format** | YAML (Projects), JSON (Legacy Assets) |
 | **Typography** | Geologica (Google Fonts) |
 
----
-
-## 📂 Project Structure
-
-```text
-Palatine 2.0/
-├── app.py                  # Flask Backend (API & Project Routing)
-├── database/
-│   └── projects/           # YAML Session Storage
-├── static/
-│   ├── css/style.css       # Modern UI System & Animations
-│   ├── js/
-│   │   ├── orbit_v2.js     # Orbital Mechanics & Three.js Core
-│   │   ├── app.js          # UI Coordination & Control Logic
-│   │   └── session.js      # Project/Session Manager (New)
-│   └── textures/           # Asset Folders (Earth maps, stars, icons)
-├── templates/
-│   └── index.html          # Main Entry Page (Spa-like UI)
-└── README.md
-```
 
 ---
 
@@ -100,4 +80,8 @@ Palatine 2.0/
 
 ## ⚖️ License & Contact
 **Project Creator:** [Astro-Reza](https://github.com/Astro-Reza)
-*Palatine is a specialized DSS for the space industry. For inquiries, please visit the repository link.*
+
+Palatine 2.0 is licensed under a proprietary license. See [LICENSE.md](./LICENSE.md) for full terms (Non-commercial, Attribution Required, No Modifications).
+
+*For mission planning inquiries or licensing permissions, please visit the repository link.*
+

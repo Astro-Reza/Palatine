@@ -1,0 +1,20 @@
+project:
+  name: Test 2
+  created: '2026-03-24T22:56:38.234783+00:00'
+  modified: '2026-03-24T23:12:39.489768+00:00'
+  version: 2.0.0
+constellations:
+- name: Satellite
+  orbit:
+    inclination: 53
+    orbital_planes: 20
+    sats_per_plane: 22
+    apogee: 550
+    perigee: 550
+    raan_spread: 15
+  payload:
+    beam_quantity: 15
+    beam_size: 160
+ground_stations: []
+simulation: {}
+analysis_results: {}
