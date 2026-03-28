@@ -308,8 +308,13 @@
 
         <div class="panel-header">
             <h2>Constellations</h2>
-            <div class="header-dots" title="More Options">
-                <span></span><span></span><span></span>
+            <div class="header-icons-right">
+                <div class="header-icon-btn" id="group-constellations-btn" title="Group Selected">
+                    <img src="/static/icon/groupSats.svg" alt="Group">
+                </div>
+                <div class="header-dots" title="More Options">
+                    <span></span><span></span><span></span>
+                </div>
             </div>
         </div>
 
@@ -976,6 +981,13 @@
 
     <!-- Custom Scripts -->
     <script src="/static/js/orbit_v2.js"></script>
+    <div id="constellation-context-menu" class="context-menu">
+        <div class="context-menu-item" id="menu-copy">Copy</div>
+        <div class="context-menu-item" id="menu-paste">Paste</div>
+        <div class="context-menu-item" id="menu-delete">Delete</div>
+        <div class="context-menu-item" id="menu-ungroup">Ungroup</div>
+    </div>
+
     <script src="/static/js/app.js"></script>
     <script src="/static/js/session.js"></script>
     <script>

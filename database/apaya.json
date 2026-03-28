@@ -1,0 +1,15 @@
+{
+    "name": "Apaya",
+    "orbit": {
+        "inclination": "72",
+        "orbital_planes": "20",
+        "sats_per_plane": "22",
+        "apogee": "2550",
+        "perigee": "2550",
+        "raan_spread": "15"
+    },
+    "payload": {
+        "beam_quantity": "15",
+        "beam_size": "300"
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "name": "atu",
+    "orbit": {
+        "inclination": "72",
+        "orbital_planes": "5",
+        "sats_per_plane": "22",
+        "apogee": "3550",
+        "perigee": "3550",
+        "raan_spread": "15"
+    },
+    "payload": {
+        "beam_quantity": "24",
+        "beam_size": "300"
+    }
+}

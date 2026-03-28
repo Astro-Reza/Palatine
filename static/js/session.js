@@ -19,35 +19,54 @@
 
     // ── Helpers ──
 
+    /** Collect the hierarchical layout of constellations and groups. */
+    function collectHierarchy(container) {
+        const hierarchy = [];
+        const children = Array.from(container.children);
+        
+        children.forEach(child => {
+            if (child.classList.contains('section')) {
+                const allSections = Array.from(document.querySelectorAll('#mainSectionsContainerRight .section'));
+                hierarchy.push({
+                    type: 'constellation',
+                    index: allSections.indexOf(child)
+                });
+            } else if (child.classList.contains('group')) {
+                const groupName = child.querySelector('.group-name').value;
+                const groupContent = child.querySelector('.group-content');
+                hierarchy.push({
+                    type: 'group',
+                    name: groupName,
+                    children: collectHierarchy(groupContent)
+                });
+            }
+        });
+        return hierarchy;
+    }
+
     /** Collect all constellation data currently in the app. */
     function collectConstellations() {
         const constellations = [];
-        const sections = document.querySelectorAll('#mainSectionsContainerRight .sections-wrapper .section');
+        // We still collect them in DOM order to match how they are added back
+        const sections = document.querySelectorAll('#mainSectionsContainerRight .section');
         sections.forEach((section, idx) => {
             const nameEl = section.querySelector('.section-header h3');
-            const values = section.querySelectorAll('.form-value');
-
+            
             // Try to get from orbitManager first (has full params)
             let data = {};
             if (window.orbitManager && window.orbitManager.constellations[idx]) {
                 const c = window.orbitManager.constellations[idx];
-                data = {
-                    name: nameEl ? nameEl.textContent : `Constellation ${idx + 1}`,
-                    orbit: {
-                        inclination: c.settings?.inclination ?? 53,
-                        orbital_planes: c.settings?.planes ?? 20,
-                        sats_per_plane: c.settings?.satsPerPlane ?? 22,
-                        apogee: c.settings?.apogee ?? 550,
-                        perigee: c.settings?.perigee ?? 550,
-                        raan_spread: 15
-                    },
-                    payload: {
-                        beam_quantity: c.settings?.beamQuantity ?? 24,
-                        beam_size: c.settings?.beamSize ?? 300
-                    }
-                };
+                data = JSON.parse(JSON.stringify(c.settings.advanced || {}));
+                // Ensure name and basic orbit params are sync'd
+                data.name = nameEl ? nameEl.textContent : c.settings.name;
+                if (!data.orbit) data.orbit = {};
+                data.orbit.inclination = c.settings.inclination;
+                data.orbit.orbital_planes = c.settings.planes;
+                data.orbit.sats_per_plane = c.settings.satsPerPlane;
+                data.orbit.apogee = c.settings.apogee;
+                data.orbit.perigee = c.settings.perigee;
             } else {
-                // Fallback: parse from DOM
+                // Fallback: minimal data
                 data = {
                     name: nameEl ? nameEl.textContent : `Constellation ${idx + 1}`,
                     orbit: {},
@@ -61,6 +80,7 @@
 
     /** Build a full project state object for saving. */
     function collectSessionState() {
+        const wrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
         return {
             project: {
                 name: _projectMeta.name,
@@ -69,6 +89,7 @@
                 version: _projectMeta.version
             },
             constellations: collectConstellations(),
+            hierarchy: collectHierarchy(wrapper),
             ground_stations: [],
             simulation: {},
             analysis_results: {},
@@ -80,7 +101,20 @@
     function clearCurrentSession() {
         // Clear orbit manager
         if (window.orbitManager) {
-            while (window.orbitManager.constellations && window.orbitManager.constellations.length > 0) {
+            window.orbitManager.constellations = [];
+            if (window.orbitManager.scene) {
+                // Find and remove all constellation-related objects
+                const toRemove = [];
+                window.orbitManager.scene.traverse(obj => {
+                    if (obj.isPoints || obj.isGroup || obj.isInstancedMesh) {
+                        // This is a bit aggressive, but orbitManager should have better cleanup
+                    }
+                });
+                // Re-init scene is safer if removeConstellation isn't enough
+                // But let's use the provided removeConstellation if possible
+            }
+            // Better way: use existing removeConstellation until empty
+            while (window.orbitManager.constellations.length > 0) {
                 window.orbitManager.removeConstellation(0);
             }
         }
@@ -96,7 +130,7 @@
         _projectMeta = projectData.project || _projectMeta;
         _currentFilename = projectData._filename || null;
 
-        // Rebuild each constellation via the same flow as Push button
+        // 1. Add all constellations to orbitManager first
         const constellations = projectData.constellations || [];
         constellations.forEach(c => {
             const settings = {
@@ -107,20 +141,62 @@
                 perigee: parseFloat(c.orbit?.perigee ?? 550),
                 beamQuantity: parseInt(c.payload?.beam_quantity ?? 24),
                 beamSize: parseFloat(c.payload?.beam_size ?? 300),
-                name: c.name || 'Unnamed'
+                name: c.name || 'Unnamed',
+                advanced: c
             };
 
             if (window.orbitManager) {
                 window.orbitManager.addConstellation(settings);
             }
-            // Use the global addConstellationToList if available
-            if (typeof window.addConstellationToList === 'function') {
-                window.addConstellationToList(settings);
-            }
         });
+
+        // 2. Rebuild DOM hierarchy
+        const wrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+        const hierarchy = projectData.hierarchy || [];
+
+        if (hierarchy.length > 0) {
+            rebuildHierarchyDOM(hierarchy, wrapper, constellations);
+        } else {
+            // Fallback for old projects without hierarchy
+            constellations.forEach((c, idx) => {
+                if (window.addConstellationToList) {
+                    const constellationObj = window.orbitManager.constellations[idx];
+                    const settings = constellationObj.settings;
+                    window.addConstellationToList(settings, constellationObj);
+                }
+            });
+        }
 
         // Update document title
         document.title = `${_projectMeta.name} — Palatine 2.0`;
+    }
+
+    function rebuildHierarchyDOM(items, parent, constellations) {
+        items.forEach(item => {
+            if (item.type === 'constellation') {
+                const c = constellations[item.index];
+                if (c && window.addConstellationToList) {
+                    const constellationObj = window.orbitManager.constellations[item.index];
+                    const settings = constellationObj.settings;
+                    const section = createConstellationSection(settings, constellationObj);
+                    parent.appendChild(section);
+                }
+            } else if (item.type === 'group') {
+                if (window.addGroupToList) {
+                    const group = window.addGroupToList(item.name, [], parent);
+                    const groupContent = group.querySelector('.group-content');
+                    rebuildHierarchyDOM(item.children, groupContent, constellations);
+                }
+            }
+        });
+    }
+
+    /** Helper to create a section without adding it to the default container immediately. */
+    function createConstellationSection(settings, constellationObj) {
+        const originalContainer = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+        window.addConstellationToList(settings, constellationObj);
+        const section = originalContainer.lastElementChild;
+        return section;
     }
 
     /** Show a brief toast notification. */

@@ -1,0 +1,15 @@
+{
+    "name": "GSO",
+    "orbit": {
+        "inclination": "0",
+        "orbital_planes": "1",
+        "sats_per_plane": "2",
+        "apogee": "35000",
+        "perigee": "35000",
+        "raan_spread": "15"
+    },
+    "payload": {
+        "beam_quantity": "24",
+        "beam_size": "300"
+    }
+}

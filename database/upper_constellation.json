@@ -1,0 +1,15 @@
+{
+    "name": "Upper Constellation",
+    "orbit": {
+        "inclination": "72",
+        "orbital_planes": "0",
+        "sats_per_plane": "12",
+        "apogee": "550",
+        "perigee": "550",
+        "raan_spread": "15"
+    },
+    "payload": {
+        "beam_quantity": "24",
+        "beam_size": "200"
+    }
+}

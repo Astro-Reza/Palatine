@@ -446,6 +446,176 @@ body {
     opacity: 1;
 }
 
+.header-icons-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-icon-btn {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-icon-btn:hover {
+    opacity: 1;
+}
+
+.header-icon-btn:active {
+    transform: scale(0.9);
+}
+
+.header-icon-btn img {
+    width: 18px;
+    height: 18px;
+}
+
+/* Collapse Arrow */
+.collapse-arrow {
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid #888;
+    margin-right: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.collapsed .collapse-arrow {
+    transform: rotate(0deg);
+}
+
+.group:not(.collapsed) > .group-header .collapse-arrow,
+.section:not(.collapsed) > .section-header .collapse-arrow {
+    transform: rotate(90deg);
+}
+
+.group.collapsed .group-content,
+.section.collapsed .form-row {
+    display: none;
+}
+
+.section.collapsed .section-header {
+    margin-bottom: 0;
+}
+
+/* Drag and Drop Styles */
+.section[draggable="true"], .group[draggable="true"] {
+    cursor: grab;
+    user-select: none;
+}
+
+.section.dragging, .group.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+/* Prevent children from interfering with drag events */
+.dragging * {
+    pointer-events: none;
+}
+
+.drop-target-above {
+    box-shadow: 0 -2px 0 0 var(--btn-green);
+}
+
+.drop-target-below {
+    box-shadow: 0 2px 0 0 var(--btn-green);
+}
+
+.drop-target-inside {
+    background-color: rgba(205, 250, 113, 0.1) !important;
+}
+
+.drag-over-container {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Scrollbar Styles for sections-wrapper */
+.sections-wrapper {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.sections-wrapper::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sections-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sections-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    visibility: hidden;
+}
+
+.sections-wrapper:hover::-webkit-scrollbar-thumb {
+    visibility: visible;
+}
+
+/* Grouping Styles */
+.group {
+    position: relative;
+    margin-bottom: 2px;
+    background-color: transparent; /* No background color */
+}
+
+.group-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 8px;
+    cursor: pointer;
+    background-color: transparent; /* No background color */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.group-header:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.group-header img {
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+}
+
+.group-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: #eee;
+    outline: none;
+    border: none;
+    background: transparent;
+    font-family: var(--font-family); /* Same font as others */
+}
+
+.group-name:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.group-content {
+    margin-left: 12px;
+    border-left: 1px solid #444; /* The gray indentation line */
+    padding-left: 4px;
+    min-height: 5px;
+}
+
+.group.selected > .group-header {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
 .sections-container {
     flex: 1;
     direction: rtl;
@@ -1624,10 +1794,9 @@ select.form-input {
     z-index: 2;
 }
 .block-green {
-    width: 12px;
+    width: 2px;
     height: 100%;
     background: #CDFA71;
-    border-radius: 10px;
     z-index: 3;
     cursor: move;
     flex-shrink: 0;
@@ -1885,4 +2054,37 @@ select.form-input {
 .session-toast.visible {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+/* Context Menu Styles */
+.context-menu {
+    position: fixed;
+    display: none;
+    z-index: 5000;
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 4px 0;
+    min-width: 140px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    font-family: var(--font-family);
+}
+
+.context-menu-item {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #d0d0d0;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.context-menu-item:hover {
+    background-color: #2a2a2a;
+    color: #fff;
+}
+
+.context-menu-item.disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
 }

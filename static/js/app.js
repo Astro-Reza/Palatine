@@ -62,9 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
             button.onclick = function () {
                 this.classList.toggle('slashed');
                 const section = this.closest('.section');
-                if (section && window.orbitManager) {
-                    const index = Array.from(section.parentNode.children).indexOf(section);
-                    window.orbitManager.toggleConstellationVisibility(index);
+                if (section && window.orbitManager && section.constellationObj) {
+                    section.constellationObj.visible = !this.classList.contains('slashed');
                 }
             };
         });
@@ -136,22 +135,86 @@ document.addEventListener('DOMContentLoaded', () => {
     const throwDeleteBtn = document.getElementById('deleteBtn');
     const pushBtn = document.querySelector('.btn-push');
     const focusBtn = document.getElementById('focusBtn');
+    const groupBtn = document.getElementById('group-constellations-btn');
 
     function updateThrowButtons() {
+        const selectedCount = document.querySelectorAll('#mainSectionsContainerRight .selected').length;
         const isFocused = window.orbitManager && window.orbitManager.focusedSat !== null;
-        if (selectedConstellationIndex !== null) {
+        
+        // Find if we have exactly one constellation selected for focus
+        const selectedSections = document.querySelectorAll('#mainSectionsContainerRight .section.selected');
+        const firstSelectedSection = selectedSections[0];
+        
+        if (selectedSections.length === 1) {
             if (focusBtn) {
                 focusBtn.disabled = false;
                 if (!isFocused) focusBtn.classList.remove('active');
             }
             if (throwDeleteBtn) throwDeleteBtn.disabled = false;
+            // Update selectedConstellationIndex based on DOM order for single selection
+            selectedConstellationIndex = getAllSections().indexOf(firstSelectedSection);
+        } else if (selectedCount > 0) {
+            // Multiple items (sections or groups) selected
+            if (focusBtn) {
+                focusBtn.disabled = !isFocused;
+                if (!isFocused) focusBtn.classList.remove('active');
+            }
+            if (throwDeleteBtn) throwDeleteBtn.disabled = false;
+            selectedConstellationIndex = null;
         } else {
             if (focusBtn) {
                 focusBtn.disabled = !isFocused;
                 if (!isFocused) focusBtn.classList.remove('active');
             }
             if (throwDeleteBtn) throwDeleteBtn.disabled = true;
+            selectedConstellationIndex = null;
         }
+    }
+
+    function getAllSections() {
+        return Array.from(document.querySelectorAll('#mainSectionsContainerRight .section'));
+    }
+
+    function refreshSectionIndices() {
+        if (!window.orbitManager) return;
+        
+        // Reorder the constellations array in OrbitManager to match the DOM order
+        const allSections = getAllSections();
+        const newConstellations = allSections.map(s => s.constellationObj).filter(c => c !== null);
+        
+        window.orbitManager.constellations = newConstellations;
+        
+        // If 2D view is active, trigger redraw
+        if (window.orbitManager.mode === '2D') {
+            window.orbitManager.draw2D();
+        }
+    }
+
+    // Add drag and drop listeners to the container for dropping into empty space
+    const sectionsWrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+    if (sectionsWrapper) {
+        sectionsWrapper.addEventListener('dragover', (e) => {
+            if (e.target === sectionsWrapper) {
+                e.preventDefault();
+                sectionsWrapper.classList.add('drag-over-container');
+            }
+        });
+
+        sectionsWrapper.addEventListener('dragleave', (e) => {
+            if (e.target === sectionsWrapper) {
+                sectionsWrapper.classList.remove('drag-over-container');
+            }
+        });
+
+        sectionsWrapper.addEventListener('drop', (e) => {
+            if (e.target === sectionsWrapper && draggedElement) {
+                e.preventDefault();
+                sectionsWrapper.classList.remove('drag-over-container');
+                sectionsWrapper.appendChild(draggedElement);
+                refreshSectionIndices();
+                updateThrowButtons();
+            }
+        });
     }
 
     if (focusBtn) {
@@ -176,15 +239,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (throwDeleteBtn) {
         throwDeleteBtn.addEventListener('click', () => {
-            if (window.orbitManager && selectedConstellationIndex !== null) {
-                // Remove from orbit manager
-                window.orbitManager.removeConstellation(selectedConstellationIndex);
-                // Remove from DOM
-                const container = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
-                const sections = Array.from(container.children);
-                if (sections[selectedConstellationIndex]) {
-                    sections[selectedConstellationIndex].remove();
-                }
+            if (window.orbitManager) {
+                const selectedItems = Array.from(document.querySelectorAll('#mainSectionsContainerRight .selected'));
+                if (selectedItems.length === 0) return;
+
+                // Sort selected sections by index descending to avoid splice shifting issues
+                const sectionsToRemove = [];
+                selectedItems.forEach(item => {
+                    if (item.classList.contains('section')) {
+                        sectionsToRemove.push(item);
+                    } else if (item.classList.contains('group')) {
+                        // All sections inside the group
+                        item.querySelectorAll('.section').forEach(s => sectionsToRemove.push(s));
+                    }
+                });
+
+                // Get unique sections and their indices
+                const uniqueSections = Array.from(new Set(sectionsToRemove));
+                const allSections = getAllSections();
+                const indicesToRemove = uniqueSections.map(s => allSections.indexOf(s)).sort((a, b) => b - a);
+
+                indicesToRemove.forEach(idx => {
+                    if (idx !== -1) {
+                        window.orbitManager.removeConstellation(idx);
+                        allSections[idx].remove();
+                    }
+                });
+
+                // Remove selected groups if they are empty or were selected themselves
+                selectedItems.forEach(item => {
+                    if (item.classList.contains('group')) {
+                        item.remove();
+                    }
+                });
+
+                // Clean up empty groups
+                document.querySelectorAll('#mainSectionsContainerRight .group').forEach(group => {
+                    if (group.querySelector('.group-content').children.length === 0) {
+                        group.remove();
+                    }
+                });
                 
                 // Clear selection
                 selectedConstellationIndex = null;
@@ -197,6 +291,338 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    if (groupBtn) {
+        groupBtn.addEventListener('click', () => {
+            groupSelectedConstellations();
+        });
+    }
+
+    function groupSelectedConstellations() {
+        const container = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+        // Find selected items that are direct children of their parent (no double selection of parent and child)
+        const selectedItems = Array.from(document.querySelectorAll('#mainSectionsContainerRight .selected'));
+        if (selectedItems.length === 0) return;
+
+        // Filter out items whose parents are also selected
+        const topLevelSelected = selectedItems.filter(item => {
+            let parent = item.parentElement;
+            while (parent && parent !== container) {
+                if (parent.classList.contains('selected')) return false;
+                parent = parent.parentElement;
+            }
+            return true;
+        });
+
+        if (topLevelSelected.length === 0) return;
+
+        // Create group at the position of the first selected item
+        const firstItem = topLevelSelected[0];
+        const group = addGroupToList("New Group", topLevelSelected, firstItem.parentElement, firstItem);
+        
+        // Clear selection after grouping
+        document.querySelectorAll('#mainSectionsContainerRight .selected').forEach(el => el.classList.remove('selected'));
+        selectedConstellationIndex = null;
+        updateThrowButtons();
+    }
+
+    /* -----------------------------------------
+       Drag and Drop Logic
+       ----------------------------------------- */
+    let draggedElement = null;
+
+    function setupDragAndDrop(el) {
+        el.addEventListener('dragstart', (e) => {
+            e.stopPropagation(); // Prevent parent groups from catching this
+            draggedElement = el;
+            el.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            // Set some data to satisfy Firefox
+            e.dataTransfer.setData('text/plain', '');
+        });
+
+        el.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const rect = el.getBoundingClientRect();
+            
+            // Clean up previous classes
+            el.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+
+            if (el.classList.contains('group')) {
+                const threshold = 15; // increased threshold for inside group
+                if (e.clientY < rect.top + threshold) {
+                    el.classList.add('drop-target-above');
+                } else if (e.clientY > rect.bottom - threshold) {
+                    el.classList.add('drop-target-below');
+                } else {
+                    el.classList.add('drop-target-inside');
+                }
+            } else {
+                const midpoint = rect.top + rect.height / 2;
+                if (e.clientY < midpoint) {
+                    el.classList.add('drop-target-above');
+                } else {
+                    el.classList.add('drop-target-below');
+                }
+            }
+        });
+
+        el.addEventListener('dragleave', () => {
+            el.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+        });
+
+        el.addEventListener('dragend', (e) => {
+            e.stopPropagation();
+            el.classList.remove('dragging');
+            document.querySelectorAll('.drop-target-above, .drop-target-below, .drop-target-inside').forEach(node => {
+                node.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+            });
+            if (sectionsWrapper) sectionsWrapper.classList.remove('drag-over-container');
+            draggedElement = null;
+        });
+
+        el.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            el.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+
+            if (!draggedElement || draggedElement === el) return;
+            
+            // Prevent dragging a group into itself or its own children
+            if (draggedElement.contains(el)) return;
+
+            const rect = el.getBoundingClientRect();
+            const threshold = 15;
+
+            if (el.classList.contains('group') && 
+                e.clientY >= rect.top + threshold && 
+                e.clientY <= rect.bottom - threshold) {
+                // Drop INSIDE group
+                const content = el.querySelector('.group-content');
+                content.appendChild(draggedElement);
+                el.classList.remove('collapsed'); // Expand if dropped inside
+            } else {
+                // Drop BEFORE or AFTER
+                const midpoint = rect.top + rect.height / 2;
+                if (e.clientY < midpoint) {
+                    el.parentNode.insertBefore(draggedElement, el);
+                } else {
+                    el.parentNode.insertBefore(draggedElement, el.nextSibling);
+                }
+            }
+            
+            refreshSectionIndices();
+            updateThrowButtons();
+        });
+    }
+
+    function addGroupToList(name = "New Group", children = [], parent = null, referenceNode = null) {
+        const container = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+        if (!parent) parent = container;
+
+        const group = document.createElement('div');
+        group.className = 'group';
+        group.draggable = true;
+        group.innerHTML = `
+            <div class="group-header">
+                <div class="collapse-arrow"></div>
+                <img src="/static/icon/groupSats.svg" alt="Group">
+                <input type="text" class="group-name" value="${name}">
+            </div>
+            <div class="group-content"></div>
+        `;
+
+        if (referenceNode) {
+            parent.insertBefore(group, referenceNode);
+        } else {
+            parent.appendChild(group);
+        }
+
+        const groupContent = group.querySelector('.group-content');
+        children.forEach(child => {
+            groupContent.appendChild(child);
+        });
+
+        // Collapse logic
+        const arrow = group.querySelector('.collapse-arrow');
+        arrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            group.classList.toggle('collapsed');
+        });
+
+        // Group selection logic
+        const groupHeader = group.querySelector('.group-header');
+        groupHeader.addEventListener('click', (e) => {
+            if (e.target.classList.contains('group-name') || e.target.classList.contains('collapse-arrow')) return;
+            
+            if (!e.ctrlKey && !e.metaKey) {
+                const isAlreadySelected = group.classList.contains('selected');
+                // Clear others
+                document.querySelectorAll('#mainSectionsContainerRight .section, #mainSectionsContainerRight .group').forEach(el => {
+                    if (el !== group) el.classList.remove('selected');
+                });
+                // Toggle self
+                group.classList.toggle('selected', !isAlreadySelected);
+            } else {
+                group.classList.toggle('selected');
+            }
+            updateThrowButtons();
+        });
+
+        // Stop propagation for group name input to prevent selection toggle
+        const groupNameInput = group.querySelector('.group-name');
+        groupNameInput.addEventListener('click', (e) => e.stopPropagation());
+
+        // Context Menu logic for group
+        groupHeader.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!group.classList.contains('selected')) {
+                document.querySelectorAll('#mainSectionsContainerRight .section, #mainSectionsContainerRight .group').forEach(el => el.classList.remove('selected'));
+                group.classList.add('selected');
+                updateThrowButtons();
+            }
+            
+            showContextMenu(e.clientX, e.clientY, 'group');
+        });
+
+        setupDragAndDrop(group);
+
+        return group;
+    }
+    window.addGroupToList = addGroupToList;
+
+    /* -----------------------------------------
+       Context Menu Global Logic
+       ----------------------------------------- */
+    const contextMenu = document.getElementById('constellation-context-menu');
+    let copiedData = null;
+
+    function showContextMenu(x, y, type) {
+        if (!contextMenu) return;
+
+        contextMenu.style.display = 'block';
+        contextMenu.style.left = `${x}px`;
+        contextMenu.style.top = `${y}px`;
+
+        // Handle Ungroup visibility
+        const ungroupItem = document.getElementById('menu-ungroup');
+        if (ungroupItem) {
+            ungroupItem.style.display = (type === 'group') ? 'block' : 'none';
+        }
+
+        // Handle Paste visibility/state
+        const pasteItem = document.getElementById('menu-paste');
+        if (pasteItem) {
+            if (copiedData) {
+                pasteItem.classList.remove('disabled');
+            } else {
+                pasteItem.classList.add('disabled');
+            }
+        }
+    }
+
+    function hideContextMenu() {
+        if (contextMenu) contextMenu.style.display = 'none';
+    }
+
+    document.addEventListener('click', () => hideContextMenu());
+    document.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('.section') && !e.target.closest('.group')) {
+            hideContextMenu();
+        }
+    });
+
+    // Menu Item Handlers
+    document.getElementById('menu-copy').addEventListener('click', () => {
+        const selectedItems = Array.from(document.querySelectorAll('#mainSectionsContainerRight .selected'));
+        if (selectedItems.length === 0) return;
+
+        // Collect data from selected items
+        copiedData = selectedItems.map(item => {
+            if (item.classList.contains('section')) {
+                return { type: 'section', settings: JSON.parse(JSON.stringify(item.constellationObj.settings)) };
+            } else if (item.classList.contains('group')) {
+                return { 
+                    type: 'group', 
+                    name: item.querySelector('.group-name').value,
+                    children: Array.from(item.querySelector('.group-content').children).map(child => {
+                         // Recursive for nested groups if needed, but simplified for now
+                         if (child.classList.contains('section')) {
+                            return { type: 'section', settings: JSON.parse(JSON.stringify(child.constellationObj.settings)) };
+                         }
+                         return null;
+                    }).filter(c => c !== null)
+                };
+            }
+        });
+        hideContextMenu();
+    });
+
+    document.getElementById('menu-paste').addEventListener('click', () => {
+        if (!copiedData) return;
+
+        const target = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+        // If a group is selected, paste into it
+        let pasteParent = target;
+        const selectedGroup = document.querySelector('#mainSectionsContainerRight .group.selected');
+        if (selectedGroup) {
+            pasteParent = selectedGroup.querySelector('.group-content');
+        }
+
+        copiedData.forEach(item => {
+            if (item.type === 'section') {
+                pasteConstellation(item.settings, pasteParent);
+            } else if (item.type === 'group') {
+                const newGroup = addGroupToList(item.name + " (Copy)", [], pasteParent);
+                const content = newGroup.querySelector('.group-content');
+                item.children.forEach(child => {
+                    pasteConstellation(child.settings, content);
+                });
+            }
+        });
+        hideContextMenu();
+    });
+
+    function pasteConstellation(settings, parent) {
+        const newSettings = JSON.parse(JSON.stringify(settings));
+        newSettings.name += " (Copy)";
+        let constellation = null;
+        if (window.orbitManager) {
+            constellation = window.orbitManager.addConstellation(newSettings);
+        }
+        addConstellationToList(newSettings, constellation);
+        // Move to correct parent if not the default container
+        const container = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+        if (parent !== container) {
+            const lastSection = container.lastElementChild;
+            parent.appendChild(lastSection);
+        }
+    }
+
+    document.getElementById('menu-delete').addEventListener('click', () => {
+        if (throwDeleteBtn) throwDeleteBtn.click();
+        hideContextMenu();
+    });
+
+    document.getElementById('menu-ungroup').addEventListener('click', () => {
+        const selectedGroups = Array.from(document.querySelectorAll('#mainSectionsContainerRight .group.selected'));
+        selectedGroups.forEach(group => {
+            const content = group.querySelector('.group-content');
+            const parent = group.parentElement;
+            const children = Array.from(content.children);
+            children.forEach(child => {
+                parent.insertBefore(child, group);
+            });
+            group.remove();
+        });
+        hideContextMenu();
+        updateThrowButtons();
+    });
 
     if (pushBtn) {
         pushBtn.addEventListener('click', () => {
@@ -219,19 +645,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: "Constellation #" + (document.querySelectorAll('#mainSectionsContainerRight .section').length + 1)
             };
             
+            let constellation = null;
             if (window.orbitManager) {
-                window.orbitManager.addConstellation(settings);
+                constellation = window.orbitManager.addConstellation(settings);
             }
-            addConstellationToList(settings);
+            addConstellationToList(settings, constellation);
         });
     }
 
-    function addConstellationToList(settings) {
+    function addConstellationToList(settings, constellationObj = null) {
         const container = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
         const section = document.createElement('div');
         section.className = 'section';
+        section.draggable = true;
+        section.constellationObj = constellationObj;
         section.innerHTML = `
             <div class="section-header">
+                <div class="collapse-arrow"></div>
                 <h3>${settings.name}</h3>
                 <div class="header-icons">
                     <div class="eye-toggle-btn">
@@ -288,22 +718,52 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(section);
         setupEyeToggles();
 
+        // Collapse logic
+        const arrow = section.querySelector('.collapse-arrow');
+        arrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            section.classList.toggle('collapsed');
+        });
+
+        function getConstellationIndex() {
+            if (!window.orbitManager || !section.constellationObj) return -1;
+            return window.orbitManager.constellations.indexOf(section.constellationObj);
+        }
+
         // Selection logic
         section.addEventListener('click', (e) => {
-            if (e.target.closest('.header-icons')) return;
+            if (e.target.closest('.header-icons') || e.target.classList.contains('collapse-arrow')) return;
 
-            const isAlreadySelected = section.classList.contains('selected');
-            const allSections = container.querySelectorAll('.section');
-            allSections.forEach(s => s.classList.remove('selected'));
-            
-            if (isAlreadySelected) {
-                selectedConstellationIndex = null;
+            if (!e.ctrlKey && !e.metaKey) {
+                const isAlreadySelected = section.classList.contains('selected');
+                // Clear others
+                document.querySelectorAll('#mainSectionsContainerRight .section, #mainSectionsContainerRight .group').forEach(el => {
+                    if (el !== section) el.classList.remove('selected');
+                });
+                // Toggle self
+                section.classList.toggle('selected', !isAlreadySelected);
             } else {
-                section.classList.add('selected');
-                selectedConstellationIndex = Array.from(section.parentNode.children).indexOf(section);
+                section.classList.toggle('selected');
             }
             updateThrowButtons();
         });
+
+        // Context Menu logic
+        section.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // If not selected, select only this
+            if (!section.classList.contains('selected')) {
+                document.querySelectorAll('#mainSectionsContainerRight .section, #mainSectionsContainerRight .group').forEach(el => el.classList.remove('selected'));
+                section.classList.add('selected');
+                updateThrowButtons();
+            }
+            
+            showContextMenu(e.clientX, e.clientY, 'section');
+        });
+
+        setupDragAndDrop(section);
 
         // Detailed settings functionality
         const settingsBtn = section.querySelector('.detailed-settings-btn');
@@ -311,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation(); // prevent triggering selection
             const advancedModal = document.getElementById('advancedSettingsModal');
             if (advancedModal) {
-                window.editingConstellationIndex = Array.from(section.parentNode.children).indexOf(section);
+                window.editingConstellationIndex = getConstellationIndex();
                 document.querySelector('.modal-title').textContent = settings.name;
                 document.querySelector('.constellation-name-input').value = settings.name;
                 
@@ -352,8 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = parseFloat(e.target.value);
             updateSliderVisuals(orbitSliderWrapper, val, parseFloat(orbitSlider.max));
             if (window.orbitManager) {
-                const idx = Array.from(section.parentNode.children).indexOf(section);
-                const c = window.orbitManager.constellations[idx];
+                const c = section.constellationObj;
                 if (c) {
                     if (c.satPoints) c.satPoints.material.opacity = val;
                     if (c.orbitGroup) {
@@ -370,8 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = parseFloat(e.target.value);
             updateSliderVisuals(beamSliderWrapper, val, parseFloat(beamSlider.max));
             if (window.orbitManager) {
-                const idx = Array.from(section.parentNode.children).indexOf(section);
-                const c = window.orbitManager.constellations[idx];
+                const c = section.constellationObj;
                 if (c && c.beamMesh) {
                     c.beamMesh.material.opacity = val;
                 }
@@ -380,7 +838,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSliderVisuals(beamSliderWrapper, parseFloat(beamSlider.value), parseFloat(beamSlider.max));
     }
     window.addConstellationToList = addConstellationToList;
-
     /* -----------------------------------------
        Time Control Logic
        ----------------------------------------- */
@@ -1034,24 +1491,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     c.init3D();
                     
-                    // Rebuild UI list
-                    const container = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
-                    container.innerHTML = '';
-                    const oldIndex = selectedConstellationIndex;
-                    window.orbitManager.constellations.forEach(co => addConstellationToList(co.settings));
-                    
-                    if (oldIndex !== null && container.children[oldIndex]) {
-                        container.children[oldIndex].classList.add('selected');
-                        selectedConstellationIndex = oldIndex;
-                    } else {
-                        selectedConstellationIndex = null;
+                    // Update ONLY the corresponding DOM element
+                    const allSections = getAllSections();
+                    const section = allSections[window.editingConstellationIndex];
+                    if (section) {
+                        section.querySelector('.section-header h3').textContent = settings.name;
+                        const values = section.querySelectorAll('.form-value');
+                        values[0].textContent = settings.satsPerPlane * settings.planes;
+                        values[1].textContent = settings.planes;
+                        values[2].textContent = settings.inclination;
+                        values[3].textContent = settings.apogee + '/' + settings.perigee + ' km';
                     }
-                    updateThrowButtons();
                 } else {
                     if (window.orbitManager) {
-                        window.orbitManager.addConstellation(settings);
+                        const constellation = window.orbitManager.addConstellation(settings);
+                        addConstellationToList(settings, constellation);
                     }
-                    addConstellationToList(settings);
                 }
                 const modal = document.getElementById('advancedSettingsModal');
                 if (modal) modal.style.display = 'none';

@@ -1,0 +1,31 @@
+project:
+  name: Anya
+  created: '2026-03-28T11:19:25.630Z'
+  modified: '2026-03-28T11:20:32.846101+00:00'
+  version: 2.0.0
+constellations:
+- name: Main Constellation
+  orbit:
+    inclination: 53
+    orbital_planes: 20
+    sats_per_plane: 22
+    apogee: 550
+    perigee: 550
+- name: Upper Constellation
+  orbit:
+    inclination: 72
+    orbital_planes: 20
+    sats_per_plane: 12
+    apogee: 550
+    perigee: 550
+hierarchy:
+- type: group
+  name: New Group
+  children:
+  - type: constellation
+    index: 0
+  - type: constellation
+    index: 1
+ground_stations: []
+simulation: {}
+analysis_results: {}
