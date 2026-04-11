@@ -1,0 +1,15 @@
+{
+    "name": "V1 Sats",
+    "orbit": {
+        "inclination": "53",
+        "orbital_planes": "20",
+        "sats_per_plane": "22",
+        "apogee": "550",
+        "perigee": "550",
+        "raan_spread": "15"
+    },
+    "payload": {
+        "beam_quantity": "24",
+        "beam_size": "300"
+    }
+}

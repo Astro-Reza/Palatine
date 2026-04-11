@@ -1,4 +1,25 @@
 # 🛰️ Palatine 2.0
+
+<div align="center">
+  <img width="300px" src="static/logo/palatine-white.svg"/>
+</div>
+
+---
+<p align="center">
+  <a href="https://palatine-space.vercel.app/terminal">
+    <img src="https://img.shields.io/badge/Official_Website-2.7.8-blue" alt="Official Website" />
+  </a>
+  <a href="https://www.linkedin.com/in/rezafauzanz/">
+    <img src="https://img.shields.io/badge/Project Lead-Reza Fauzan-lightblue" alt="Official Website" />
+  </a>
+  <a href="https://www.linkedin.com/in/rezafauzanz/">
+    <img src="https://img.shields.io/badge/Project Lead-Reza Fauzan-lightblue" alt="Official Website" />
+  </a>
+</p>
+
+---
+A comprehensive web-based platform for Low Earth Orbit (LEO) satellite constellation visualization and link budget analysis.
+
 ### **The Advanced LEO Commercialization & Mission Planning Platform**
 
 **Palatine 2.0** is a sophisticated, data-driven pre-mission consultancy platform designed for satellite operators. It serves as a comprehensive **Decision Support System (DSS)**, enabling rapid visualization, optimization, and session-based management of Low Earth Orbit (LEO) satellite constellations.
@@ -8,24 +29,45 @@
 ## 🚀 Core Features
 
 ### **1. Real-Time Orbital Visualization**
+
+<details>
+<summary><b>More</b></summary>
+
 - **3D World View:** A stunning, interactive WebGL Earth model using **Three.js** with high-resolution day/night shader materials.
 - **2D Map Projection:** Seamless toggle to a traditional Mercator projection for global coverage analysis.
 - **Dynamic Propagation:** Real-time orbit simulation with customizable time stepping (from real-time to high-speed multipliers).
 
+</details>
+
 ### **2. Constellation Design & Payload Parameters**
+
+<details>
+<summary><b>More</b></summary>
+
 - **Orbital Mechanics:** Configure inclination, planes, satellites per plane, apogee/perigee, and RAAN spread.
 - **Payload Specs:** Define beam quantity, beam size (km), gain, frequency, and transmit power (EIRP).
 - **Inter-Satellite Links (ISL):** Logic for simulating laser, RF, or microwave cross-links between satellites.
+</details>
 
 ### **3. Workspace & Session Management (New)**
+
+<details>
+<summary><b>More</b></summary>
+
 - **YAML-Based Projects:** Projects are saved as human-readable `.yaml` files, making them easy to version control and audit.
 - **Integrated Menu System:** A custom "Logo Dropdown" provides standard file operations (New Project, Open, Save, Export).
 - **Safe Persistence:** Custom async modal dialogs handle "Unsaved Changes" warnings to prevent data loss.
+</details>
 
 ### **4. Visualization Overlays**
+
+<details>
+<summary><b>More</b></summary>
+
 - **Earth Graticule:** Toggleable Latitude/Longitude line grid for precise positioning.
 - **Beam Footprints:** Dynamic cone and footprint visualization for focused satellites.
 - **Multi-Shell Support:** Push multiple independent constellations into a single simulation environment.
+</details>
 
 ---
 
