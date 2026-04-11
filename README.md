@@ -12,9 +12,6 @@
   <a href="https://www.linkedin.com/in/rezafauzanz/">
     <img src="https://img.shields.io/badge/Project Lead-Reza Fauzan-lightblue" alt="Official Website" />
   </a>
-  <a href="https://www.linkedin.com/in/rezafauzanz/">
-    <img src="https://img.shields.io/badge/Project Lead-Reza Fauzan-lightblue" alt="Official Website" />
-  </a>
 </p>
 
 ---
