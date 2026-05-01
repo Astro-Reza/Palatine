@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellations Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #222222;
+            --bg-header: #2E2E2E;
+            --text-main: #E0E0E0;
+            --text-muted: #CCCCCC;
+            --border-color: #333333;
+            --font-family: 'Geologica', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            /* Patterned background */
+            background: repeating-linear-gradient(45deg,
+                    #121212,
+                    #121212 10px,
+                    #1a1a1a 10px,
+                    #1a1a1a 20px);
+            display: flex;
+            justify-content: flex-end;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font-family);
+        }
+
+        .panel {
+            /* --- NEW: Added ID for JS, relative positioning, and min/max width --- */
+            position: relative;
+            width: 350px;
+            min-width: 250px;
+            /* Prevents making it too small */
+            max-width: 800px;
+            /* Prevents making it too large */
+            height: 100vh;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            background-color: transparent;
+            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+            /* Shadow on the left */
+        }
+
+        /* --- NEW: Resizer Drag Handle Styles --- */
+        .resizer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            /* 5px wide draggable area */
+            cursor: ew-resize;
+            /* Left-right arrow cursor */
+            z-index: 10;
+            background-color: transparent;
+            transition: background-color 0.2s;
+        }
+
+        /* Shows a subtle line when you hover over the edge so you know you can drag */
+        .resizer:hover,
+        .resizer.active {
+            background-color: #555555;
+        }
+
+        /* --- Header Styles --- */
+        .panel-header {
+            flex-shrink: 0;
+            background-color: var(--bg-header);
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #111;
+        }
+
+        .panel-header h2 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header-dots {
+            display: flex;
+            gap: 3px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .header-dots span {
+            display: block;
+            width: 4px;
+            height: 4px;
+            background-color: var(--text-main);
+            border-radius: 50%;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .header-dots:hover span {
+            opacity: 1;
+        }
+
+        /* --- Scroll Container --- */
+        .sections-container {
+            flex: 1;
+            direction: rtl;
+            overflow-y: auto;
+            background-color: var(--bg-main);
+            transition: background-color 0.3s ease;
+        }
+
+        .sections-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sections-container::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .sections-container::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .sections-wrapper {
+            direction: ltr;
+        }
+
+        /* --- Section Styles --- */
+        .section {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .section-header h3 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .header-icons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .header-icons img {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            display: block;
+        }
+
+        .header-icons img:hover {
+            opacity: 1;
+        }
+
+        /* --- Eye Toggle Logic --- */
+        .eye-toggle-btn {
+            position: relative;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .eye-toggle-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -15%;
+            width: 130%;
+            height: 2px;
+            background-color: var(--text-main);
+            transform: translateY(-50%) rotate(45deg);
+            opacity: 0;
+            transition: opacity 0.15s ease-in-out;
+            pointer-events: none;
+            border-radius: 2px;
+            box-shadow: 0 0 2px var(--bg-main);
+        }
+
+        .eye-toggle-btn.slashed::after {
+            opacity: 1;
+        }
+
+        /* --- Data Row Styles --- */
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .form-value {
+            font-size: 12px;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .section-footer-row {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+
+        .isl-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .isl-value {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="panel" id="sidePanel">
+        <div class="resizer" id="dragHandle"></div>
+
+        <div class="panel-header">
+            <h2>Constellations</h2>
+            <div class="header-dots" title="More Options">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <div class="sections-container" id="mainSectionsContainer">
+            <div class="sections-wrapper">
+
+                <div class="section">
+                    <div class="section-header">
+                        <h3>Main Constellation</h3>
+                        <div class="header-icons">
+                            <div class="eye-toggle-btn">
+                                <img src="static/icon/toogleView.svg" alt="Toggle View">
+                            </div>
+                            <img src="static/icon/more1.svg" alt="More Settings">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <span class="form-label">Sats Amount</span>
+                        <span class="form-value">1234</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Orbital Planes</span>
+                        <span class="form-value">20</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Inclination</span>
+                        <span class="form-value">53</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Apogee (km)</span>
+                        <span class="form-value">478</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Perigee (km)</span>
+                        <span class="form-value">775</span>
+                    </div>
+
+                    <div class="section-footer-row">
+                        <div class="isl-title">ISL to</div>
+                        <div class="isl-value">Constellation #2</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h3>MEO Backhaul</h3>
+                        <div class="header-icons">
+                            <div class="eye-toggle-btn">
+                                <img src="static/icon/toogleView.svg" alt="Toggle View">
+                            </div>
+                            <img src="static/icon/more1.svg" alt="More Settings">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <span class="form-label">Sats Amount</span>
+                        <span class="form-value">950</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Orbital Planes</span>
+                        <span class="form-value">20</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Inclination</span>
+                        <span class="form-value">53</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Apogee (km)</span>
+                        <span class="form-value">3459</span>
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Perigee (km)</span>
+                        <span class="form-value">3507</span>
+                    </div>
+
+                    <div class="section-footer-row">
+                        <div class="isl-title">ISL to</div>
+                        <div class="isl-value">Constellation #2</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Eye Toggle Logic ---
+            const toggleButtons = document.querySelectorAll('.eye-toggle-btn');
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    this.classList.toggle('slashed');
+                });
+            });
+
+            // --- NEW: Resizer Logic ---
+            const resizer = document.getElementById('dragHandle');
+            const panel = document.getElementById('sidePanel');
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('active'); // Keeps the hover color while dragging
+                document.body.style.cursor = 'ew-resize'; // Forces cursor to stay as arrow
+                document.body.style.userSelect = 'none'; // Stops text from highlighting while dragging
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+
+                // Because panel is pushed to the right, its width is the screen width minus the mouse X position
+                let newWidth = window.innerWidth - e.clientX;
+                panel.style.width = `${newWidth}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('active');
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto'; // Turns text selection back on
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

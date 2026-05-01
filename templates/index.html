@@ -78,281 +78,287 @@
 
     <div class="main-content">
 
-    <div id="orbit-canvas-container">
-        <canvas id="orbit-canvas"></canvas>
-        <div id="orbit-container-3d"></div>
-        <div class="satellite-info" id="satellite-info">
-            <div class="sat-name">Constellation Stats</div>
-            <div class="sat-coords">
-                <span>Satellites: <span id="sat-count">0</span></span>
-                <span>Planes: <span id="plane-count">0</span></span>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="panel" id="sidePanelRight">
-        <div class="resizer" id="dragHandleRight"></div>
-
-        <div class="menu-container">
-            <div class="header-row">
-                <h1>Constellation List</h1>
-                <div class="icon-group">
-                    <img src="/static/icon/toogleWindow.svg" id="toggleWindowRightBtn" alt="Toggle Window" title="Toggle Transparency">
-                    <img src="/static/icon/leftArrow.svg" alt="Back" title="Hide Window">
-                </div>
-            </div>
-            
-            <div class="action-row">
-                <button class="btn-dark">Variables</button>
-                <button class="btn-dark">Presets</button>
-                <button class="btn-green" onclick="document.getElementById('advancedSettingsModal').style.display='flex'">Add</button>
-            </div>
-        </div>
-
-        <div class="panel-header">
-            <div class="header-icons-right">
-                <div class="header-icon-btn" id="group-constellations-btn" title="Group Selected">
-                    <img src="/static/icon/groupSats.svg" alt="Group">
-                </div>
-                <div class="header-dots" title="More Options">
-                    <span></span><span></span><span></span>
+        <div id="orbit-canvas-container">
+            <canvas id="orbit-canvas"></canvas>
+            <div id="orbit-container-3d"></div>
+            <div class="satellite-info" id="satellite-info">
+                <div class="sat-name">Constellation Stats</div>
+                <div class="sat-coords">
+                    <span>Satellites: <span id="sat-count">0</span></span>
+                    <span>Planes: <span id="plane-count">0</span></span>
                 </div>
             </div>
         </div>
 
-        <div class="sections-container" id="mainSectionsContainerRight">
-            <div class="sections-wrapper">
-                <!-- Constellations will be added here dynamically -->
-            </div>
-        </div>
 
-        <div class="time-controls-bar">
-            <div class="time-info">
-                <span id="time-display">T+ 00:00</span>
-                <span id="multiplier-display">1.0x</span>
-            </div>
-            <div class="control-buttons">
-                <button class="time-btn" id="slower-btn" title="Slower">«</button>
-                <button class="time-btn" id="pause-play-btn" title="Pause/Play">II</button>
-                <button class="time-btn" id="faster-btn" title="Faster">»</button>
-                <button class="time-btn sync-btn" id="utc-sync-btn" title="Sync UTC">UTC</button>
-            </div>
-        </div>
-    </div>
+        <div class="panel" id="sidePanelRight">
+            <div class="resizer" id="dragHandleRight"></div>
 
-    <div class="middle-area">
-
-        <div class="view-list-container">
-            <div class="dropdown-container closed" id="viewSettingsDropdown">
-                <div class="dropdown-header" id="dropdownToggleBtn">
-                    <div class="title-group">
-                        <span class="main-title">View Settings</span>
-                        <span class="subtitle">| Click box to toggle</span>
+            <div class="menu-container">
+                <div class="header-row">
+                    <h1>Constellation List</h1>
+                    <div class="icon-group">
+                        <img src="/static/icon/toogleWindow.svg" id="toggleWindowRightBtn" alt="Toggle Window"
+                            title="Toggle Transparency">
+                        <img src="/static/icon/leftArrow.svg" alt="Back" title="Hide Window">
                     </div>
-                    <div class="chevron"></div>
                 </div>
 
-                <div class="dropdown-content">
-                    <div class="list-item">
-                        <div class="color-box box-ascending"></div>
-                        <span>Ascending Orbit</span>
+                <div class="action-row">
+                    <button class="btn-dark">Variables</button>
+                    <button class="btn-dark">Presets</button>
+                    <button class="btn-green"
+                        onclick="document.getElementById('advancedSettingsModal').style.display='flex'">Add</button>
+                </div>
+            </div>
+
+            <div class="panel-header">
+                <div class="header-icons-right">
+                    <div class="header-icon-btn" id="group-constellations-btn" title="Group Selected">
+                        <img src="/static/icon/groupSats.svg" alt="Group">
                     </div>
-                    <div class="list-item">
-                        <div class="color-box box-descending"></div>
-                        <span>Descending Orbit</span>
+                    <div class="header-dots" title="More Options">
+                        <span></span><span></span><span></span>
                     </div>
-                    <div class="list-item">
-                        <div class="color-box box-intra"></div>
-                        <span>Intra-Plane ISL</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-inter"></div>
-                        <span>Inter-Plane ISL</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-borders toggled-off"></div>
-                        <span>Geo Borders</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-latlon toggled-off"></div>
-                        <span>Lat/Lon Grid</span>
-                    </div>
+                </div>
+            </div>
+
+            <div class="sections-container" id="mainSectionsContainerRight">
+                <div class="sections-wrapper">
+                    <!-- Constellations will be added here dynamically -->
+                </div>
+            </div>
+
+            <div class="time-controls-bar">
+                <div class="time-info">
+                    <span id="time-display">T+ 00:00</span>
+                    <span id="multiplier-display">1.0x</span>
+                </div>
+                <div class="control-buttons">
+                    <button class="time-btn" id="slower-btn" title="Slower">«</button>
+                    <button class="time-btn" id="pause-play-btn" title="Pause/Play">II</button>
+                    <button class="time-btn" id="faster-btn" title="Faster">»</button>
+                    <button class="time-btn sync-btn" id="utc-sync-btn" title="Sync UTC">UTC</button>
                 </div>
             </div>
         </div>
 
-        <div class="throw-button-container">
-            <div class="toolbar">
-                <div class="toggle-group">
-                    <span class="toggle-label" id="viewLabel">3d View</span>
-                    <label class="switch">
-                        <input type="checkbox" id="viewToggle" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
+        <div class="middle-area">
 
-                <div class="action-group">
-                    <button class="btn btn-focus" id="focusBtn" disabled>
-                        Focus
-                        <svg class="focus-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14"
-                            height="14">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
-                            <circle cx="12" cy="12" r="3" fill="currentColor" />
-                        </svg>
-                    </button>
-                    <button class="btn btn-delete" id="deleteBtn" disabled>Delete</button>
-                    <button class="btn btn-push">
-                        Push
-                        <svg class="arrow-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5"
-                                stroke-linecap="round" stroke-linejoin="round" fill="none" />
-                        </svg>
-                    </button>
+            <div class="view-list-container">
+                <div class="dropdown-container closed" id="viewSettingsDropdown">
+                    <div class="dropdown-header" id="dropdownToggleBtn">
+                        <div class="title-group">
+                            <span class="main-title">View Settings</span>
+                            <span class="subtitle">| Click box to toggle</span>
+                        </div>
+                        <div class="chevron"></div>
+                    </div>
+
+                    <div class="dropdown-content">
+                        <div class="list-item">
+                            <div class="color-box box-ascending"></div>
+                            <span>Ascending Orbit</span>
+                        </div>
+                        <div class="list-item">
+                            <div class="color-box box-descending"></div>
+                            <span>Descending Orbit</span>
+                        </div>
+                        <div class="list-item">
+                            <div class="color-box box-intra"></div>
+                            <span>Intra-Plane ISL</span>
+                        </div>
+                        <div class="list-item">
+                            <div class="color-box box-inter"></div>
+                            <span>Inter-Plane ISL</span>
+                        </div>
+                        <div class="list-item">
+                            <div class="color-box box-borders toggled-off"></div>
+                            <span>Geo Borders</span>
+                        </div>
+                        <div class="list-item">
+                            <div class="color-box box-latlon toggled-off"></div>
+                            <span>Lat/Lon Grid</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-    </div>
-
-    <div class="panel" id="sidePanelLeft">
-        <div class="resizer" id="dragHandleLeft"></div>
-
-        <div class="panel-header">
-            <h2>Satellite Settings</h2>
-            <div class="header-icons">
-                <img src="/static/icon/toogleWindow.svg" id="toggleWindowBtn" alt="Toggle" title="Toggle Transparency">
-                <img src="/static/icon/leftArrow.svg" alt="Hide" title="Hide Window">
-            </div>
-        </div>
-
-        <div class="sections-container" id="mainSectionsContainerLeft">
-            <div class="sections-wrapper">
-
-                <div class="section">
-                    <div class="section-header">
-                        <h3>Orbit</h3>
-                        <img src="/static/icon/more1.svg" id="openAdvancedSettings" alt="More" title="More Settings" style="cursor: pointer;">
-                    </div>
-
-                    <div class="form-row">
-                        <span class="form-label">Inclination (deg)</span>
-                        <input type="text" class="form-input" id="input-inclination" value="53">
-                    </div>
-
-                    <div class="form-row">
-                        <span class="form-label">Orbital Planes</span>
-                        <input type="text" class="form-input" id="input-planes" value="20">
-                    </div>
-
-                    <div class="form-row">
-                        <span class="form-label">Symmetric Orbit</span>
+            <div class="throw-button-container">
+                <div class="toolbar">
+                    <div class="toggle-group">
+                        <span class="toggle-label" id="viewLabel">3d View</span>
                         <label class="switch">
-                            <input type="checkbox" id="symmetricToggle" checked>
+                            <input type="checkbox" id="viewToggle" checked>
                             <span class="slider"></span>
                         </label>
                     </div>
 
-                    <div class="sub-group" id="apogeePerigeeGroup">
+                    <div class="action-group">
+                        <button class="btn btn-focus" id="focusBtn" disabled>
+                            Focus
+                            <svg class="focus-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14"
+                                height="14">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                                <circle cx="12" cy="12" r="3" fill="currentColor" />
+                            </svg>
+                        </button>
+                        <button class="btn btn-delete" id="deleteBtn" disabled>Delete</button>
+                        <button class="btn btn-push">
+                            Push
+                            <svg class="arrow-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5"
+                                    stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="panel" id="sidePanelLeft">
+            <div class="resizer" id="dragHandleLeft"></div>
+
+            <div class="panel-header">
+                <h2>Satellite Settings</h2>
+                <div class="header-icons">
+                    <img src="/static/icon/toogleWindow.svg" id="toggleWindowBtn" alt="Toggle"
+                        title="Toggle Transparency">
+                    <img src="/static/icon/leftArrow.svg" alt="Hide" title="Hide Window">
+                </div>
+            </div>
+
+            <div class="sections-container" id="mainSectionsContainerLeft">
+                <div class="sections-wrapper">
+
+                    <div class="section">
+                        <div class="section-header">
+                            <h3>Orbit</h3>
+                            <img src="/static/icon/more1.svg" id="openAdvancedSettings" alt="More" title="More Settings"
+                                style="cursor: pointer;">
+                        </div>
+
                         <div class="form-row">
-                            <span class="form-label">Apogee (km)</span>
-                            <input type="text" class="form-input" id="input-apogee" value="550">
+                            <span class="form-label">Inclination (deg)</span>
+                            <input type="text" class="form-input" id="input-inclination" value="53">
+                        </div>
+
+                        <div class="form-row">
+                            <span class="form-label">Orbital Planes</span>
+                            <input type="text" class="form-input" id="input-planes" value="20">
+                        </div>
+
+                        <div class="form-row">
+                            <span class="form-label">Symmetric Orbit</span>
+                            <label class="switch">
+                                <input type="checkbox" id="symmetricToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="sub-group" id="apogeePerigeeGroup">
+                            <div class="form-row">
+                                <span class="form-label">Apogee (km)</span>
+                                <input type="text" class="form-input" id="input-apogee" value="550">
+                            </div>
+                            <div class="form-row">
+                                <span class="form-label">Perigee (km)</span>
+                                <input type="text" class="form-input" id="input-perigee" value="550">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <span class="form-label">Sats Quantity per plane</span>
+                            <input type="text" class="form-input" id="input-sats-per-plane" value="22">
                         </div>
                         <div class="form-row">
-                            <span class="form-label">Perigee (km)</span>
-                            <input type="text" class="form-input" id="input-perigee" value="550">
+                            <span class="form-label">Orbit Decay (Years)</span>
+                            <input type="text" class="form-input" value="5">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Eccentricity</span>
+                            <input type="text" class="form-input" value="0.0001">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">RAAN Spread (deg)</span>
+                            <input type="text" class="form-input" value="15">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Argument of Perigee (deg)</span>
+                            <input type="text" class="form-input" value="0">
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <span class="form-label">Sats Quantity per plane</span>
-                        <input type="text" class="form-input" id="input-sats-per-plane" value="22">
+                    <div class="section">
+                        <div class="section-header">
+                            <h3>Inter Satellite Links</h3>
+                            <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More"
+                                title="More Settings" style="cursor: pointer;">
+                        </div>
+
+                        <div class="form-row">
+                            <span class="form-label">Connection Type</span>
+                            <select class="form-input">
+                                <option value="lasers" selected>Lasers</option>
+                                <option value="rf">RF</option>
+                                <option value="microwave">Microwave</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Transmit Capacity (Gbps)</span>
+                            <input type="text" class="form-input" value="100">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Lasers Quantity / Maximum Link</span>
+                            <input type="text" class="form-input" value="4">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Backhaul Transmit Capacity (Gbps)</span>
+                            <input type="text" class="form-input" value="20">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Up Backhaul Quantity</span>
+                            <input type="text" class="form-input" value="4">
+                        </div>
                     </div>
-                    <div class="form-row">
-                        <span class="form-label">Orbit Decay (Years)</span>
-                        <input type="text" class="form-input" value="5">
+
+                    <div class="section">
+                        <div class="section-header">
+                            <h3>Telecommunication</h3>
+                            <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More"
+                                title="More Settings" style="cursor: pointer;">
+                        </div>
+
+                        <div class="form-row">
+                            <span class="form-label">Beam Quantity</span>
+                            <input type="text" class="form-input" id="input-beam-quantity" value="24">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Beam Size (Km)</span>
+                            <input type="text" class="form-input" id="input-beam-size" value="300">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Beam Colors</span>
+                            <input type="text" class="form-input" value="4">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Gain (dB)</span>
+                            <input type="text" class="form-input" value="45">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Frequency (GHz)</span>
+                            <input type="text" class="form-input" value="12.5">
+                        </div>
+                        <div class="form-row">
+                            <span class="form-label">Transmitter Power/EIRP (dBW)</span>
+                            <input type="text" class="form-input" value="35">
+                        </div>
                     </div>
-                    <div class="form-row">
-                        <span class="form-label">Eccentricity</span>
-                        <input type="text" class="form-input" value="0.0001">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">RAAN Spread (deg)</span>
-                        <input type="text" class="form-input" value="15">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Argument of Perigee (deg)</span>
-                        <input type="text" class="form-input" value="0">
-                    </div>
+
                 </div>
-
-                <div class="section">
-                    <div class="section-header">
-                        <h3>Inter Satellite Links</h3>
-                        <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More" title="More Settings" style="cursor: pointer;">
-                    </div>
-
-                    <div class="form-row">
-                        <span class="form-label">Connection Type</span>
-                        <select class="form-input">
-                            <option value="lasers" selected>Lasers</option>
-                            <option value="rf">RF</option>
-                            <option value="microwave">Microwave</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Transmit Capacity (Gbps)</span>
-                        <input type="text" class="form-input" value="100">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Lasers Quantity / Maximum Link</span>
-                        <input type="text" class="form-input" value="4">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Backhaul Transmit Capacity (Gbps)</span>
-                        <input type="text" class="form-input" value="20">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Up Backhaul Quantity</span>
-                        <input type="text" class="form-input" value="4">
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-header">
-                        <h3>Telecommunication</h3>
-                        <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More" title="More Settings" style="cursor: pointer;">
-                    </div>
-
-                    <div class="form-row">
-                        <span class="form-label">Beam Quantity</span>
-                        <input type="text" class="form-input" id="input-beam-quantity" value="24">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Beam Size (Km)</span>
-                        <input type="text" class="form-input" id="input-beam-size" value="300">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Beam Colors</span>
-                        <input type="text" class="form-input" value="4">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Gain (dB)</span>
-                        <input type="text" class="form-input" value="45">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Frequency (GHz)</span>
-                        <input type="text" class="form-input" value="12.5">
-                    </div>
-                    <div class="form-row">
-                        <span class="form-label">Transmitter Power/EIRP (dBW)</span>
-                        <input type="text" class="form-input" value="35">
-                    </div>
-                </div>
-
             </div>
         </div>
-    </div>
 
     </div>
 
@@ -1053,10 +1059,10 @@
 
                 if (window.SessionManager) {
                     switch (action) {
-                        case 'new-project':  SessionManager.newProject(); break;
+                        case 'new-project': SessionManager.newProject(); break;
                         case 'open-project': SessionManager.showOpenDialog(); break;
                         case 'save-project': SessionManager.saveProject(); break;
-                        case 'export':       SessionManager.exportProject(); break;
+                        case 'export': SessionManager.exportProject(); break;
                         default: console.log('Menu action (no handler):', action);
                     }
                 }

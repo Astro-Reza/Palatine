@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation Navigation</title>
+    <style>
+        /* Base page styling - removed padding to make it flush to the edges */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #2a2a2a;
+            font-family: 'Geologica', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Main Navigation Container */
+        .nav-container {
+            display: flex;
+            width: 100%;
+            height: 49px;
+            background-color: #141414;
+            box-sizing: border-box;
+        }
+
+        /* White block on the left */
+        .logo-block {
+            width: 56px;
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .logo-block img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+
+        /* Container for the menu items */
+        .nav-menus {
+            display: flex;
+            align-items: flex-end;
+            /* Forces the active tab to touch the bottom */
+            height: 100%;
+            padding-left: 16px;
+            gap: 12px;
+        }
+
+        /* Shared styling for all nav items */
+        .nav-item {
+            color: #ffffff;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            user-select: none;
+            /* Prevents text highlighting on quick clicks */
+        }
+
+        /* Active Tab Styling */
+        .nav-item.active {
+            background-color: #282828;
+            height: 38px;
+            padding: 0 16px;
+            border-radius: 6px 6px 0 0;
+            font-weight: 600;
+        }
+
+        /* Inactive Tab Styling */
+        .nav-item.inactive {
+            background-color: #242424;
+            height: 30px;
+            padding: 0 16px;
+            border-radius: 999px;
+            font-weight: 400;
+            color: #e0e0e0;
+            margin-bottom: 9.5px;
+            /* Vertically centers the pill in the 49px container */
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .nav-item.inactive:hover {
+            background-color: #2f2f2f;
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="nav-container">
+        <div class="logo-block">
+            <img src="static/icon/palatine-icon-black.svg" alt="Palatine Logo"
+                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMTQuOCA5LjJMMjIgMTJMMTQuOCAxNC44TDEyIDIyTDkuMiAxNC44TDIgMTJMOS4yIDkuMkwxMiAyWiIgZmlsbD0iYmxhY2siLz48L3N2Zz4='">
+        </div>
+
+        <div class="nav-menus">
+            <div class="nav-item active">Space System</div>
+            <div class="nav-item inactive">Ground System</div>
+            <div class="nav-item inactive">Calculate</div>
+            <div class="nav-item inactive">Simulations</div>
+        </div>
+    </nav>
+
+    <script>
+        // Select all the navigation items
+        const navItems = document.querySelectorAll('.nav-item');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', function () {
+                // First, reset all items to the 'inactive' state
+                navItems.forEach(nav => {
+                    nav.classList.remove('active');
+                    nav.classList.add('inactive');
+                });
+
+                // Then, set the clicked item to the 'active' state
+                this.classList.remove('inactive');
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+
+</html>

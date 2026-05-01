@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mousemove', (e) => {
         if (isResizingLeft && panelLeft) {
-            let newWidth = e.clientX;
+            let newWidth = window.innerWidth - e.clientX;
             panelLeft.style.width = `${newWidth}px`;
         }
     });
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mousemove', (e) => {
         if (isResizingRight && panelRight) {
-            let newWidth = window.innerWidth - e.clientX;
+            let newWidth = e.clientX;
             panelRight.style.width = `${newWidth}px`;
         }
     });

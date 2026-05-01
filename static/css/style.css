@@ -350,11 +350,11 @@ body {
 
 /* Scoped Panel Shadows */
 #sidePanelLeft {
-    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5);
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
 }
 
 #sidePanelRight {
-    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5);
 }
 
 .resizer {
@@ -370,11 +370,11 @@ body {
 
 /* Scoped Resizer Positions */
 #dragHandleLeft {
-    right: 0;
+    left: 0;
 }
 
 #dragHandleRight {
-    left: 0;
+    right: 0;
 }
 
 .resizer:hover,
