@@ -71,7 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resizerRight = document.getElementById('dragHandleRight');
     const panelRight = document.getElementById('sidePanelRight');
+    const toggleWindowRightBtn = document.getElementById('toggleWindowRightBtn');
     let isResizingRight = false;
+
+    if (toggleWindowRightBtn && panelRight) {
+        toggleWindowRightBtn.addEventListener('click', () => {
+            panelRight.classList.toggle('transparent-mode');
+        });
+    }
 
     if (resizerRight && panelRight) {
         resizerRight.addEventListener('mousedown', (e) => {
@@ -332,7 +339,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let draggedElement = null;
 
     function setupDragAndDrop(el) {
+        el.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.section-header') || e.target.closest('.group-header')) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                    el.draggable = false;
+                } else {
+                    el.draggable = true;
+                }
+            } else {
+                el.draggable = false;
+            }
+        });
+
         el.addEventListener('dragstart', (e) => {
+            if (!el.draggable) {
+                e.preventDefault();
+                return;
+            }
             e.stopPropagation(); // Prevent parent groups from catching this
             draggedElement = el;
             el.classList.add('dragging');

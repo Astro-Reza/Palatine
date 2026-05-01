@@ -584,8 +584,8 @@ body {
 }
 
 .group-header img {
-    width: 16px;
-    height: 16px;
+    width: 11.2px;
+    height: 11.2px;
     opacity: 0.8;
 }
 
@@ -667,8 +667,10 @@ body {
 
 .section-header h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: bold;
+    flex: 1;
+    text-align: left;
 }
 
 .section-header img {
@@ -2087,4 +2089,87 @@ select.form-input {
     opacity: 0.4;
     cursor: default;
     pointer-events: none;
+}
+
+/* ===============================
+   Constellation List Header
+   =============================== */
+.menu-container {
+    font-family: var(--font-family);
+    width: 100%;
+    color: white;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    border-bottom: 1px solid #111;
+    background-color: var(--bg-header);
+    flex-shrink: 0;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.header-row h1 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.icon-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.icon-group img {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    display: block;
+}
+
+.icon-group img:hover {
+    opacity: 1;
+}
+
+.action-row {
+    display: flex;
+    gap: 8px;
+}
+
+.action-row button {
+    font-family: var(--font-family);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    flex: 1;
+}
+
+.action-row button:hover {
+    opacity: 0.85;
+}
+
+.action-row button:active {
+    transform: scale(0.96);
+}
+
+.action-row .btn-dark {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+.action-row .btn-green {
+    background-color: var(--btn-green);
+    color: #222;
+    font-weight: 600;
 }

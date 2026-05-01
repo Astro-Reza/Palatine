@@ -1,10 +1,10 @@
 {
     "name": "Constellation One",
     "orbit": {
-        "inclination": "53",
-        "orbital_planes": "20",
-        "sats_per_plane": "22",
-        "apogee": "550",
+        "inclination": "72",
+        "orbital_planes": "25",
+        "sats_per_plane": "15",
+        "apogee": "450",
         "perigee": "550",
         "raan_spread": "15"
     },

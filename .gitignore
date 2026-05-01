@@ -5,3 +5,4 @@ constellation-list.html
 
 # Exclude the entire System Prompt folder
 System Prompt/
+database/

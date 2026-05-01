@@ -1,0 +1,1 @@
+This folder meant for a html code before integrations only use it as reference and copy from here to integrate. DO NOT integrate anything inside this folder right into the backend. 
