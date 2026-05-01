@@ -90,6 +90,115 @@
         </div>
     </div>
 
+    <div class="panel" id="sidePanelRight">
+        <div class="resizer" id="dragHandleRight"></div>
+
+        <div class="panel-header">
+            <h2>Constellations</h2>
+            <div class="header-icons-right">
+                <div class="header-icon-btn" id="group-constellations-btn" title="Group Selected">
+                    <img src="/static/icon/groupSats.svg" alt="Group">
+                </div>
+                <div class="header-dots" title="More Options">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sections-container" id="mainSectionsContainerRight">
+            <div class="sections-wrapper">
+                <!-- Constellations will be added here dynamically -->
+            </div>
+        </div>
+
+        <div class="time-controls-bar">
+            <div class="time-info">
+                <span id="time-display">T+ 00:00</span>
+                <span id="multiplier-display">1.0x</span>
+            </div>
+            <div class="control-buttons">
+                <button class="time-btn" id="slower-btn" title="Slower">«</button>
+                <button class="time-btn" id="pause-play-btn" title="Pause/Play">II</button>
+                <button class="time-btn" id="faster-btn" title="Faster">»</button>
+                <button class="time-btn sync-btn" id="utc-sync-btn" title="Sync UTC">UTC</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="middle-area">
+
+        <div class="view-list-container">
+            <div class="dropdown-container closed" id="viewSettingsDropdown">
+                <div class="dropdown-header" id="dropdownToggleBtn">
+                    <div class="title-group">
+                        <span class="main-title">View Settings</span>
+                        <span class="subtitle">| Click box to toggle</span>
+                    </div>
+                    <div class="chevron"></div>
+                </div>
+
+                <div class="dropdown-content">
+                    <div class="list-item">
+                        <div class="color-box box-ascending"></div>
+                        <span>Ascending Orbit</span>
+                    </div>
+                    <div class="list-item">
+                        <div class="color-box box-descending"></div>
+                        <span>Descending Orbit</span>
+                    </div>
+                    <div class="list-item">
+                        <div class="color-box box-intra"></div>
+                        <span>Intra-Plane ISL</span>
+                    </div>
+                    <div class="list-item">
+                        <div class="color-box box-inter"></div>
+                        <span>Inter-Plane ISL</span>
+                    </div>
+                    <div class="list-item">
+                        <div class="color-box box-borders toggled-off"></div>
+                        <span>Geo Borders</span>
+                    </div>
+                    <div class="list-item">
+                        <div class="color-box box-latlon toggled-off"></div>
+                        <span>Lat/Lon Grid</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="throw-button-container">
+            <div class="toolbar">
+                <div class="toggle-group">
+                    <span class="toggle-label" id="viewLabel">3d View</span>
+                    <label class="switch">
+                        <input type="checkbox" id="viewToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="action-group">
+                    <button class="btn btn-focus" id="focusBtn" disabled>
+                        Focus
+                        <svg class="focus-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14"
+                            height="14">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                            <circle cx="12" cy="12" r="3" fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="btn btn-delete" id="deleteBtn" disabled>Delete</button>
+                    <button class="btn btn-push">
+                        Push
+                        <svg class="arrow-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5"
+                                stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     <div class="panel" id="sidePanelLeft">
         <div class="resizer" id="dragHandleLeft"></div>
 
@@ -225,115 +334,6 @@
                     </div>
                 </div>
 
-            </div>
-        </div>
-    </div>
-
-    <div class="middle-area">
-
-        <div class="view-list-container">
-            <div class="dropdown-container closed" id="viewSettingsDropdown">
-                <div class="dropdown-header" id="dropdownToggleBtn">
-                    <div class="title-group">
-                        <span class="main-title">View Settings</span>
-                        <span class="subtitle">| Click box to toggle</span>
-                    </div>
-                    <div class="chevron"></div>
-                </div>
-
-                <div class="dropdown-content">
-                    <div class="list-item">
-                        <div class="color-box box-ascending"></div>
-                        <span>Ascending Orbit</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-descending"></div>
-                        <span>Descending Orbit</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-intra"></div>
-                        <span>Intra-Plane ISL</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-inter"></div>
-                        <span>Inter-Plane ISL</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-borders toggled-off"></div>
-                        <span>Geo Borders</span>
-                    </div>
-                    <div class="list-item">
-                        <div class="color-box box-latlon toggled-off"></div>
-                        <span>Lat/Lon Grid</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="throw-button-container">
-            <div class="toolbar">
-                <div class="toggle-group">
-                    <span class="toggle-label" id="viewLabel">3d View</span>
-                    <label class="switch">
-                        <input type="checkbox" id="viewToggle" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="action-group">
-                    <button class="btn btn-focus" id="focusBtn" disabled>
-                        Focus
-                        <svg class="focus-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14"
-                            height="14">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
-                            <circle cx="12" cy="12" r="3" fill="currentColor" />
-                        </svg>
-                    </button>
-                    <button class="btn btn-delete" id="deleteBtn" disabled>Delete</button>
-                    <button class="btn btn-push">
-                        Push
-                        <svg class="arrow-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5"
-                                stroke-linecap="round" stroke-linejoin="round" fill="none" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <div class="panel" id="sidePanelRight">
-        <div class="resizer" id="dragHandleRight"></div>
-
-        <div class="panel-header">
-            <h2>Constellations</h2>
-            <div class="header-icons-right">
-                <div class="header-icon-btn" id="group-constellations-btn" title="Group Selected">
-                    <img src="/static/icon/groupSats.svg" alt="Group">
-                </div>
-                <div class="header-dots" title="More Options">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
-        </div>
-
-        <div class="sections-container" id="mainSectionsContainerRight">
-            <div class="sections-wrapper">
-                <!-- Constellations will be added here dynamically -->
-            </div>
-        </div>
-
-        <div class="time-controls-bar">
-            <div class="time-info">
-                <span id="time-display">T+ 00:00</span>
-                <span id="multiplier-display">1.0x</span>
-            </div>
-            <div class="control-buttons">
-                <button class="time-btn" id="slower-btn" title="Slower">«</button>
-                <button class="time-btn" id="pause-play-btn" title="Pause/Play">II</button>
-                <button class="time-btn" id="faster-btn" title="Faster">»</button>
-                <button class="time-btn sync-btn" id="utc-sync-btn" title="Sync UTC">UTC</button>
             </div>
         </div>
     </div>
