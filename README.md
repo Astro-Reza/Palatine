@@ -1,4 +1,4 @@
-# 🛰️ Palatine 2.0
+# Palatine Orbit-Link 2.0.2
 
 <div align="center">
   <img width="300px" src="static/logo/palatine-white.svg"/>
@@ -7,17 +7,20 @@
 ---
 <p align="center">
   <a href="https://palatine-space.vercel.app/terminal">
-    <img src="https://img.shields.io/badge/Official_Website-2.7.8-blue" alt="Official Website" />
+    <img src="https://img.shields.io/badge/Website-2.3.5-cyan?style=for-the-badge" alt="Official Website" />
+  </a>
+  <a>
+    <img src="https://img.shields.io/badge/Version-2.0.2-yellow?style=for-the-badge" alt="Version" />
   </a>
   <a href="https://www.linkedin.com/in/rezafauzanz/">
-    <img src="https://img.shields.io/badge/Project Lead-Reza Fauzan-lightblue" alt="Official Website" />
+    <img src="https://img.shields.io/badge/Project Lead-Reza Fauzan-darkblue?style=for-the-badge" alt="Lead" />
   </a>
 </p>
 
 ---
 A comprehensive web-based platform for Low Earth Orbit (LEO) satellite constellation visualization and link budget analysis.
 
-### **The Advanced LEO Commercialization & Mission Planning Platform**
+### The Advanced LEO Commercialization & Mission Planning Platform
 
 **Palatine 2.0** is a sophisticated, data-driven pre-mission consultancy platform designed for satellite operators. It serves as a comprehensive **Decision Support System (DSS)**, enabling rapid visualization, optimization, and session-based management of Low Earth Orbit (LEO) satellite constellations.
 

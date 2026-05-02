@@ -16,3 +16,4 @@ build/
 # Exclude the entire System Prompt folder
 System Prompt/
 database/
+templates-input/
