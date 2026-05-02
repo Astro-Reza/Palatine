@@ -226,131 +226,51 @@
             <div class="sections-container" id="mainSectionsContainerLeft">
                 <div class="sections-wrapper">
 
-                    <div class="section">
-                        <div class="section-header">
-                            <h3>Orbit</h3>
-                            <img src="/static/icon/more1.svg" id="openAdvancedSettings" alt="More" title="More Settings"
-                                style="cursor: pointer;">
+                    <div class="isl-wrapper" id="islWrapper">
+                        <div class="isl-title-container">
+                            <h2>Inter-Satellite Links</h2>
+                            <div class="isl-add-btn" id="islAddBtn" title="Add constellation to ISL tree"></div>
                         </div>
 
-                        <div class="form-row">
-                            <span class="form-label">Inclination (deg)</span>
-                            <input type="text" class="form-input" id="input-inclination" value="53">
-                        </div>
+                        <ul class="isl-tree" id="islTree">
+                            <!-- ISL tree nodes are added dynamically -->
+                        </ul>
 
-                        <div class="form-row">
-                            <span class="form-label">Orbital Planes</span>
-                            <input type="text" class="form-input" id="input-planes" value="20">
-                        </div>
-
-                        <div class="form-row">
-                            <span class="form-label">Symmetric Orbit</span>
-                            <label class="switch">
-                                <input type="checkbox" id="symmetricToggle" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="sub-group" id="apogeePerigeeGroup">
-                            <div class="form-row">
-                                <span class="form-label">Apogee (km)</span>
-                                <input type="text" class="form-input" id="input-apogee" value="550">
-                            </div>
-                            <div class="form-row">
-                                <span class="form-label">Perigee (km)</span>
-                                <input type="text" class="form-input" id="input-perigee" value="550">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <span class="form-label">Sats Quantity per plane</span>
-                            <input type="text" class="form-input" id="input-sats-per-plane" value="22">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Orbit Decay (Years)</span>
-                            <input type="text" class="form-input" value="5">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Eccentricity</span>
-                            <input type="text" class="form-input" value="0.0001">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">RAAN Spread (deg)</span>
-                            <input type="text" class="form-input" value="15">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Argument of Perigee (deg)</span>
-                            <input type="text" class="form-input" value="0">
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">
-                            <h3>Inter Satellite Links</h3>
-                            <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More"
-                                title="More Settings" style="cursor: pointer;">
-                        </div>
-
-                        <div class="form-row">
-                            <span class="form-label">Connection Type</span>
-                            <select class="form-input">
-                                <option value="lasers" selected>Lasers</option>
-                                <option value="rf">RF</option>
-                                <option value="microwave">Microwave</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Transmit Capacity (Gbps)</span>
-                            <input type="text" class="form-input" value="100">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Lasers Quantity / Maximum Link</span>
-                            <input type="text" class="form-input" value="4">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Backhaul Transmit Capacity (Gbps)</span>
-                            <input type="text" class="form-input" value="20">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Up Backhaul Quantity</span>
-                            <input type="text" class="form-input" value="4">
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">
-                            <h3>Telecommunication</h3>
-                            <img src="/static/icon/more1.svg" class="trigger-advanced-settings" alt="More"
-                                title="More Settings" style="cursor: pointer;">
-                        </div>
-
-                        <div class="form-row">
-                            <span class="form-label">Beam Quantity</span>
-                            <input type="text" class="form-input" id="input-beam-quantity" value="24">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Beam Size (Km)</span>
-                            <input type="text" class="form-input" id="input-beam-size" value="300">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Beam Colors</span>
-                            <input type="text" class="form-input" value="4">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Gain (dB)</span>
-                            <input type="text" class="form-input" value="45">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Frequency (GHz)</span>
-                            <input type="text" class="form-input" value="12.5">
-                        </div>
-                        <div class="form-row">
-                            <span class="form-label">Transmitter Power/EIRP (dBW)</span>
-                            <input type="text" class="form-input" value="35">
+                        <div class="isl-empty-state" id="islEmptyState">
+                            No ISL defined yet.<br>Click + to add a constellation.
                         </div>
                     </div>
 
                 </div>
+
+                <!-- Vertical resizer between tree and settings -->
+                <div class="isl-v-resizer" id="islVResizer"></div>
+
+                <!-- ISL Detail Settings Panel (always visible, bottom half) -->
+                <div class="isl-settings-panel" id="islSettingsPanel">
+                    <div class="isl-settings-tab-bar">
+                        <div class="isl-settings-tab active" data-tab="isl">ISL</div>
+                        <!-- Future tabs go here -->
+                    </div>
+
+                    <div class="isl-settings-content disabled" id="islSettingsContent">
+                        <div class="isl-settings-connection-name" id="islConnectionName">
+                            No link selected
+                        </div>
+
+                        <div class="isl-link-pill">
+                            <div class="isl-pill-dot"></div>
+                            <span id="islPillSource">—</span>
+                            <span style="color:#707070; font-size:10px;">→</span>
+                            <strong id="islPillTarget">—</strong>
+                        </div>
+
+                        <div class="isl-settings-body" id="islSettingsBody">
+                            <!-- Sections are built dynamically by isl.js -->
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1006,6 +926,7 @@
 
     <script src="/static/js/app.js"></script>
     <script src="/static/js/session.js"></script>
+    <script src="/static/js/isl.js"></script>
     <script>
         // Navigation bar interactivity
         const navItems = document.querySelectorAll('.nav-item');

@@ -4,21 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
        ----------------------------------------- */
     const resizerLeft = document.getElementById('dragHandleLeft');
     const panelLeft = document.getElementById('sidePanelLeft');
-    const symmetricToggle = document.getElementById('symmetricToggle');
-    const apogeePerigeeGroup = document.getElementById('apogeePerigeeGroup');
     const toggleWindowBtn = document.getElementById('toggleWindowBtn');
 
-    function handleSymmetricToggle() {
-        if (symmetricToggle.checked) {
-            apogeePerigeeGroup.classList.add('faded');
-        } else {
-            apogeePerigeeGroup.classList.remove('faded');
-        }
-    }
-    if (symmetricToggle) {
-        handleSymmetricToggle();
-        symmetricToggle.addEventListener('change', handleSymmetricToggle);
-    }
 
     if (toggleWindowBtn && panelLeft) {
         toggleWindowBtn.addEventListener('click', () => {
@@ -140,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
        ----------------------------------------- */
     let selectedConstellationIndex = null;
     const throwDeleteBtn = document.getElementById('deleteBtn');
-    const pushBtn = document.querySelector('.btn-push');
     const focusBtn = document.getElementById('focusBtn');
     const groupBtn = document.getElementById('group-constellations-btn');
 
@@ -647,34 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateThrowButtons();
     });
 
-    if (pushBtn) {
-        pushBtn.addEventListener('click', () => {
-            const inclination = parseFloat(document.getElementById('input-inclination').value);
-            const planes = parseInt(document.getElementById('input-planes').value);
-            const satsPerPlane = parseInt(document.getElementById('input-sats-per-plane').value);
-            const apogee = parseFloat(document.getElementById('input-apogee').value);
-            const perigee = parseFloat(document.getElementById('input-perigee').value);
-            const beamQuantity = parseInt(document.getElementById('input-beam-quantity').value);
-            const beamSize = parseFloat(document.getElementById('input-beam-size').value);
-            
-            const settings = {
-                inclination,
-                planes,
-                satsPerPlane,
-                apogee,
-                perigee,
-                beamQuantity,
-                beamSize,
-                name: "Constellation #" + (document.querySelectorAll('#mainSectionsContainerRight .section').length + 1)
-            };
-            
-            let constellation = null;
-            if (window.orbitManager) {
-                constellation = window.orbitManager.addConstellation(settings);
-            }
-            addConstellationToList(settings, constellation);
-        });
-    }
+
 
     function addConstellationToList(settings, constellationObj = null) {
         const container = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
@@ -928,18 +887,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelector('.modal-title').textContent = "Add Constellation";
                 document.querySelector('.constellation-name-input').value = "";
                 
-                // Sync values from left panel
-                const safeVal = (id, fallback) => {
-                    const el = document.getElementById(id);
-                    return el && el.value ? el.value : fallback;
-                };
-                
-                document.getElementById('pop-inclination').value = safeVal('input-inclination', 53);
-                document.getElementById('pop-planes').value = safeVal('input-planes', 20);
-                document.getElementById('pop-sats-per-plane').value = safeVal('input-sats-per-plane', 22);
-                document.getElementById('pop-apogee').value = safeVal('input-apogee', 550);
-                document.getElementById('pop-perigee').value = safeVal('input-perigee', 550);
-                document.getElementById('pop-beam-quantity').value = safeVal('input-beam-quantity', 24);
+                document.getElementById('pop-inclination').value = 53;
+                document.getElementById('pop-planes').value = 20;
+                document.getElementById('pop-sats-per-plane').value = 22;
+                document.getElementById('pop-apogee').value = 550;
+                document.getElementById('pop-perigee').value = 550;
+                document.getElementById('pop-beam-quantity').value = 24;
 
                 const symToggle = document.getElementById('sym-toggle');
                 if(symToggle) {

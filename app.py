@@ -82,6 +82,7 @@ def _make_project_template(name="Untitled Project"):
             "version": "2.0.0"
         },
         "constellations": [],
+        "isl_links": [],
         "ground_stations": [],
         "simulation": {},
         "analysis_results": {}
@@ -159,6 +160,98 @@ def project_open(filename):
             project = yaml.safe_load(f)
         project['_filename'] = filename
         return jsonify(project), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+import uuid
+
+@app.route('/api/project/<filename>/isl', methods=['POST'])
+def isl_add(filename):
+    if not filename.endswith('.yaml'):
+        filename += '.yaml'
+    
+    filepath = os.path.join(PROJECTS_DIR, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Project not found"}), 404
+        
+    data = request.json
+    if not data or 'source' not in data or 'target' not in data:
+        return jsonify({"error": "Invalid data. 'source' and 'target' are required."}), 400
+        
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            project = yaml.safe_load(f)
+            
+        if 'isl_links' not in project:
+            project['isl_links'] = []
+            
+        # Optional: could validate source/target exist in project['constellations']
+        
+        new_isl = {
+            "id": f"isl_{uuid.uuid4().hex[:8]}",
+            "source": data['source'],
+            "target": data['target'],
+            "type": data.get('type', 'laser'),
+            "max_range_km": data.get('max_range_km', 5000),
+            "data_rate_gbps": data.get('data_rate_gbps', 10),
+            "bidirectional": data.get('bidirectional', True)
+        }
+        
+        project['isl_links'].append(new_isl)
+        project['project']['modified'] = datetime.now(timezone.utc).isoformat()
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(project, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            
+        return jsonify({"message": "ISL link added", "isl": new_isl}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/project/<filename>/isl/<isl_id>', methods=['DELETE'])
+def isl_delete(filename, isl_id):
+    if not filename.endswith('.yaml'):
+        filename += '.yaml'
+        
+    filepath = os.path.join(PROJECTS_DIR, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Project not found"}), 404
+        
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            project = yaml.safe_load(f)
+            
+        if 'isl_links' not in project:
+            return jsonify({"error": "No ISL links found"}), 404
+            
+        initial_len = len(project['isl_links'])
+        project['isl_links'] = [link for link in project['isl_links'] if link.get('id') != isl_id]
+        
+        if len(project['isl_links']) == initial_len:
+            return jsonify({"error": "ISL link not found"}), 404
+            
+        project['project']['modified'] = datetime.now(timezone.utc).isoformat()
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(project, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            
+        return jsonify({"message": "ISL link deleted"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/project/<filename>/isl', methods=['GET'])
+def isl_list(filename):
+    if not filename.endswith('.yaml'):
+        filename += '.yaml'
+        
+    filepath = os.path.join(PROJECTS_DIR, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Project not found"}), 404
+        
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            project = yaml.safe_load(f)
+            
+        return jsonify(project.get('isl_links', [])), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

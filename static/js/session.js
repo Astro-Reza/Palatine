@@ -56,7 +56,13 @@
             let data = {};
             if (window.orbitManager && window.orbitManager.constellations[idx]) {
                 const c = window.orbitManager.constellations[idx];
+                
+                // Ensure stable ID
+                if (!c.settings.id) c.settings.id = 'const_' + Math.random().toString(36).substr(2, 9);
+                
                 data = JSON.parse(JSON.stringify(c.settings.advanced || {}));
+                data.id = c.settings.id;
+                
                 // Ensure name and basic orbit params are sync'd
                 data.name = nameEl ? nameEl.textContent : c.settings.name;
                 if (!data.orbit) data.orbit = {};
@@ -68,6 +74,7 @@
             } else {
                 // Fallback: minimal data
                 data = {
+                    id: 'const_' + Math.random().toString(36).substr(2, 9),
                     name: nameEl ? nameEl.textContent : `Constellation ${idx + 1}`,
                     orbit: {},
                     payload: {}
@@ -76,6 +83,43 @@
             constellations.push(data);
         });
         return constellations;
+    }
+
+    /** Convert the frontend window.islLinks tree into a flat graph of edges using constellation IDs. */
+    function collectISLLinks() {
+        if (!window.islLinks) return [];
+        const edges = [];
+        const constellations = collectConstellations(); // Already has stable IDs
+        
+        // Helper to find ID by name
+        function getIdByName(name) {
+            const c = constellations.find(c => c.name === name);
+            return c ? c.id : null;
+        }
+
+        function traverse(node) {
+            const sourceId = getIdByName(node.name);
+            if (!sourceId) return;
+            
+            node.children.forEach(child => {
+                const targetId = getIdByName(child.name);
+                if (targetId) {
+                    edges.push({
+                        id: 'isl_' + Math.random().toString(36).substr(2, 9),
+                        source: sourceId,
+                        target: targetId,
+                        type: 'laser',
+                        max_range_km: 5000,
+                        data_rate_gbps: 10,
+                        bidirectional: true
+                    });
+                }
+                traverse(child);
+            });
+        }
+        
+        window.islLinks.forEach(rootNode => traverse(rootNode));
+        return edges;
     }
 
     /** Build a full project state object for saving. */
@@ -90,6 +134,7 @@
             },
             constellations: collectConstellations(),
             hierarchy: collectHierarchy(wrapper),
+            isl_links: collectISLLinks(),
             ground_stations: [],
             simulation: {},
             analysis_results: {},
@@ -169,6 +214,52 @@
 
         // Update document title
         document.title = `${_projectMeta.name} — Palatine 2.0`;
+
+        // 3. Reconstruct ISL tree from flat edge list
+        if (window.islLinks && typeof window.islRenderTree === 'function') {
+            const edges = projectData.isl_links || [];
+            window.islLinks.length = 0; // Clear array
+            
+            // Helper to get name by ID
+            function getNameById(id) {
+                const c = constellations.find(c => c.id === id);
+                return c ? c.name : null;
+            }
+            
+            // Build tree from edges
+            const nodeMap = {};
+            
+            // Create nodes
+            edges.forEach(edge => {
+                const sourceName = getNameById(edge.source);
+                const targetName = getNameById(edge.target);
+                
+                if (sourceName && targetName) {
+                    if (!nodeMap[sourceName]) nodeMap[sourceName] = { name: sourceName, children: [] };
+                    if (!nodeMap[targetName]) nodeMap[targetName] = { name: targetName, children: [] };
+                    
+                    // Prevent circular references in tree representation
+                    const isAlreadyDescendant = (parent, childName) => {
+                        if (parent.name === childName) return true;
+                        return parent.children.some(c => isAlreadyDescendant(c, childName));
+                    };
+                    
+                    if (!isAlreadyDescendant(nodeMap[targetName], sourceName)) {
+                        nodeMap[sourceName].children.push(nodeMap[targetName]);
+                    }
+                }
+            });
+            
+            // Find root nodes (nodes that are never targets)
+            const targets = new Set(edges.map(e => getNameById(e.target)).filter(Boolean));
+            Object.values(nodeMap).forEach(node => {
+                if (!targets.has(node.name)) {
+                    window.islLinks.push(node);
+                }
+            });
+            
+            window.islRenderTree();
+        }
     }
 
     function rebuildHierarchyDOM(items, parent, constellations) {
