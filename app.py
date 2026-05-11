@@ -33,9 +33,6 @@ def serve_static(filename):
 def index():
     return render_template('index.html')
 
-@app.route('/test-advanced')
-def test_advanced():
-    return render_template('test-advanced.html')
 
 @app.route('/ground-system')
 def ground_system():

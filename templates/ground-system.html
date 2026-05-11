@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palatine 2.0.0</title>
+    <link rel="icon" type="image/png" href="/static/icon/site-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <nav class="nav-container">
+        <div class="logo-block" id="logoMenuToggle">
+            <img src="/static/icon/palatine-icon-black.svg" alt="Palatine Logo"
+                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMTQuOCA5LjJMMjIgMTJMMTQuOCAxNC44TDEyIDIyTDkuMiAxNC44TDIgMTJMOS4yIDkuMkwxMiAyWiIgZmlsbD0iYmxhY2siLz48L3N2Zz4='">
+        </div>
+
+        <!-- Logo Dropdown Menu -->
+        <div class="logo-dropdown" id="logoDropdown">
+            <div class="logo-menu-group">
+                <div class="logo-menu-label">File</div>
+                <div class="logo-menu-item" data-action="new-project">
+                    <span>New Project</span>
+                    <span class="menu-shortcut">Ctrl+N</span>
+                </div>
+                <div class="logo-menu-item" data-action="open-project">
+                    <span>Open</span>
+                    <span class="menu-shortcut">Ctrl+O</span>
+                </div>
+                <div class="logo-menu-item" data-action="save-project">
+                    <span>Save</span>
+                    <span class="menu-shortcut">Ctrl+S</span>
+                </div>
+                <div class="logo-menu-item" data-action="export">
+                    <span>Export</span>
+                    <span class="menu-shortcut">Ctrl+E</span>
+                </div>
+            </div>
+            <div class="logo-menu-divider"></div>
+            <div class="logo-menu-group">
+                <div class="logo-menu-label">Edit</div>
+                <div class="logo-menu-item" data-action="undo">
+                    <span>Undo</span>
+                    <span class="menu-shortcut">Ctrl+Z</span>
+                </div>
+                <div class="logo-menu-item" data-action="redo">
+                    <span>Redo</span>
+                    <span class="menu-shortcut">Ctrl+Y</span>
+                </div>
+            </div>
+            <div class="logo-menu-divider"></div>
+            <div class="logo-menu-item" data-action="view">
+                <span>View</span>
+            </div>
+            <div class="logo-menu-item" data-action="settings">
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <div class="nav-menus">
+            <div class="nav-item inactive" onclick="window.location.href='/'" title="Space System">Space System</div>
+            <div class="nav-item active" title="Ground System">Ground System</div>
+            <div class="nav-item inactive" title="Calculate">Calculate</div>
+            <div class="nav-item inactive" title="Simulations">Simulations</div>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <!-- Content for ground-system.html will go here later -->
+    </div>
+
+    <script>
+        // Logo dropdown menu toggle
+        const logoToggle = document.getElementById('logoMenuToggle');
+        const logoDropdown = document.getElementById('logoDropdown');
+
+        if (logoToggle && logoDropdown) {
+            logoToggle.addEventListener('click', function (e) {
+                e.stopPropagation();
+                logoDropdown.classList.toggle('open');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                if (!logoDropdown.contains(e.target) && !logoToggle.contains(e.target)) {
+                    logoDropdown.classList.remove('open');
+                }
+            });
+
+            // Close dropdown on Escape key
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    logoDropdown.classList.remove('open');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
