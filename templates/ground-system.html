@@ -72,7 +72,44 @@
     </nav>
 
     <div class="main-content">
-        <!-- Content for ground-system.html will go here later -->
+        <div class="panel" id="sidePanelRight">
+            <div class="resizer" id="dragHandleRight"></div>
+
+            <div class="menu-container">
+                <div class="header-row">
+                    <h1>Ground Hardware</h1>
+                    <div class="icon-group">
+                        <img src="/static/icon/toogleWindow.svg" id="toggleWindowRightBtn" alt="Toggle Window"
+                            title="Toggle Transparency">
+                        <img src="/static/icon/leftArrow.svg" alt="Back" title="Hide Window">
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <button class="btn-dark">Variables</button>
+                    <button class="btn-dark">Presets</button>
+                    <button class="btn-green">Add</button>
+                </div>
+            </div>
+
+            <div class="panel-header">
+                <div class="header-icons-right">
+                    <div class="header-icon-btn" id="group-constellations-btn" title="Group Selected">
+                        <img src="/static/icon/groupSats.svg" alt="Group">
+                    </div>
+                    <div class="header-dots" title="More Options">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sections-container" id="mainSectionsContainerRight">
+                <div class="sections-wrapper">
+                    <!-- Ground hardware will be added here dynamically -->
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <script>
