@@ -110,9 +110,227 @@
             </div>
 
         </div>
+
+        <div class="panel" id="sidePanelLeft">
+            <div class="resizer" id="dragHandleLeft"></div>
+
+            <div class="menu-container">
+                <div class="header-row">
+                    <h1>Simulation Settings</h1>
+                    <div class="icon-group">
+                        <img src="/static/icon/toogleWindow.svg" id="toggleWindowLeftBtn" alt="Toggle Window" title="Toggle Transparency">
+                        <img src="/static/icon/leftArrow.svg" alt="Hide" title="Hide Window">
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <button class="btn-dark">Variables</button>
+                    <button class="btn-dark">Presets</button>
+                    <button class="btn-green">Run</button>
+                </div>
+            </div>
+
+            <div class="sections-container" id="mainSectionsContainerLeft">
+                <div class="sections-wrapper" style="padding: 0 20px;">
+                    
+                    <!-- ── Analysis Type ── -->
+                    <div class="section" style="padding-top: 0; padding-left: 0; padding-right: 0;">
+                        <div class="section-label">Analysis Type</div>
+
+                        <select class="select-full" id="analysisType" onchange="updateAnalysisSettings()">
+                            <option value="montecarlo">Monte Carlo Simulation</option>
+                            <option value="analytical">Analytical (Gamma)</option>
+                        </select>
+
+                        <!-- Monte Carlo sub-settings -->
+                        <div class="sub-settings" id="sub-montecarlo">
+                            <div class="setting-row">
+                                <span class="setting-label">Number of iterations</span>
+                                <select class="setting-select">
+                                    <option>1,000</option>
+                                    <option selected>10,000</option>
+                                    <option>100,000</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <span class="setting-label">Random seed</span>
+                                <input class="setting-input" type="number" value="42">
+                            </div>
+                            <div class="setting-row">
+                                <span class="setting-label">Confidence interval</span>
+                                <select class="setting-select">
+                                    <option>90%</option>
+                                    <option>95%</option>
+                                    <option selected>99%</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Analytical sub-settings -->
+                        <div class="sub-settings hidden" id="sub-analytical">
+                            <div class="setting-row">
+                                <span class="setting-label">Fit method</span>
+                                <select class="setting-select">
+                                    <option selected>MLE</option>
+                                    <option>Method of Moments</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <span class="setting-label">Confidence interval</span>
+                                <select class="setting-select">
+                                    <option>90%</option>
+                                    <option selected>95%</option>
+                                    <option>99%</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Time & Orbit Coverage ── -->
+                    <div class="section" style="padding-left: 0; padding-right: 0;">
+                        <div class="section-label">Time &amp; Orbit Coverage</div>
+
+                        <div class="setting-row">
+                            <span class="setting-label">Simulation duration</span>
+                            <select class="setting-select">
+                                <option>1 day</option>
+                                <option>7 days</option>
+                                <option>30 days</option>
+                                <option selected>60 days</option>
+                                <option>1 year (365 d)</option>
+                                <option>1.75 years</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Time step</span>
+                            <select class="setting-select">
+                                <option>1 s</option>
+                                <option selected>5 s</option>
+                                <option>10 s</option>
+                                <option>30 s</option>
+                                <option>60 s</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Start epoch</span>
+                            <input class="setting-input" type="date" value="2026-04-18">
+                        </div>
+                    </div>
+
+                    <!-- ── Elevation Angle Statistics ── -->
+                    <div class="section" style="padding-left: 0; padding-right: 0;">
+                        <div class="section-label">Elevation Angle Statistics</div>
+
+                        <div class="setting-row">
+                            <span class="setting-label">Distribution model</span>
+                            <select class="setting-select">
+                                <option selected>Gamma</option>
+                                <option>Rayleigh</option>
+                                <option>Empirical</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Gamma fit method</span>
+                            <select class="setting-select">
+                                <option selected>MLE</option>
+                                <option>Method of Moments</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">θ minimum cutoff</span>
+                            <input class="setting-input" type="number" value="10" style="width:110px;">
+                        </div>
+                    </div>
+
+                    <!-- ── Atmospheric Attenuation ── -->
+                    <div class="section" style="padding-left: 0; padding-right: 0;">
+                        <div class="section-label">Atmospheric Attenuation</div>
+
+                        <div class="setting-row">
+                            <span class="setting-label">Model</span>
+                            <select class="setting-select">
+                                <option selected>ITU-R P.618-13</option>
+                                <option>Free space only</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Exceedance prob. pₑ</span>
+                            <select class="setting-select">
+                                <option selected>1%</option>
+                                <option>5%</option>
+                                <option>10%</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">Poly. fit max error</span>
+                            <input class="setting-input" type="number" value="0.5" step="0.1">
+                        </div>
+                    </div>
+
+                    <!-- ── Statistical Outputs ── -->
+                    <div class="section" style="padding-left: 0; padding-right: 0;">
+                        <div class="section-label">Statistical Outputs</div>
+
+                        <div class="setting-row">
+                            <span class="setting-label">Computation mode</span>
+                            <select class="setting-select">
+                                <option>Fast</option>
+                                <option selected>Full</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">CDF/PDF bins</span>
+                            <select class="setting-select">
+                                <option>50</option>
+                                <option selected>100</option>
+                                <option>200</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <!-- ── Previous Run ── -->
+                    <div class="section" style="padding-left: 0; padding-right: 0; border-bottom: none;">
+                        <div class="prev-run-header">Previous Run</div>
+                        <div class="run-card">
+                            <div class="run-card-title">RUN_1_4/18/2026</div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Best Case Power</span>
+                                <span class="run-stat-value">−94.6 dBW</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Worst Case Power</span>
+                                <span class="run-stat-value">−105.0 dBW</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Expected Margin</span>
+                                <span class="run-stat-value">7.03 dB</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Mean Contact Duration</span>
+                                <span class="run-stat-value">648 s</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Samples Used</span>
+                                <span class="run-stat-value">10,000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
+        function updateAnalysisSettings() {
+            const type = document.getElementById('analysisType').value;
+            document.querySelectorAll('.sub-settings').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById('sub-' + type);
+            if (target) target.classList.remove('hidden');
+        }
+
         // Logo dropdown menu toggle
         const logoToggle = document.getElementById('logoMenuToggle');
         const logoDropdown = document.getElementById('logoDropdown');
