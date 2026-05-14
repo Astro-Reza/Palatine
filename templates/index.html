@@ -26,6 +26,10 @@
                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMTQuOCA5LjJMMjIgMTJMMTQuOCAxNC44TDEyIDIyTDkuMiAxNC44TDIgMTJMOS4yIDkuMkwxMiAyWiIgZmlsbD0iYmxhY2siLz48L3N2Zz4='">
         </div>
 
+        <div class="project-name-container">
+            <input type="text" id="projectNameInput" class="project-name-input" value="Untitled Project" title="Click to rename project">
+        </div>
+
         <!-- Logo Dropdown Menu -->
         <div class="logo-dropdown" id="logoDropdown">
             <div class="logo-menu-group">
@@ -73,6 +77,7 @@
             <div class="nav-item inactive" onclick="window.location.href='/ground-system'" title="Ground System">Ground System</div>
             <div class="nav-item inactive" title="Calculate">Calculate</div>
             <div class="nav-item inactive" title="Simulations">Simulations</div>
+            <div class="nav-item inactive" onclick="if(window.SessionManager) window.SessionManager.showOpenDialog()" title="Projects">Projects</div>
         </div>
     </nav>
 

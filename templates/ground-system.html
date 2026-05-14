@@ -25,6 +25,10 @@
                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMTQuOCA5LjJMMjIgMTJMMTQuOCAxNC44TDEyIDIyTDkuMiAxNC44TDIgMTJMOS4yIDkuMkwxMiAyWiIgZmlsbD0iYmxhY2siLz48L3N2Zz4='">
         </div>
 
+        <div class="project-name-container">
+            <input type="text" id="projectNameInput" class="project-name-input" value="Untitled Project" title="Click to rename project">
+        </div>
+
         <!-- Logo Dropdown Menu -->
         <div class="logo-dropdown" id="logoDropdown">
             <div class="logo-menu-group">
@@ -72,6 +76,7 @@
             <div class="nav-item active" title="Ground System">Ground System</div>
             <div class="nav-item inactive" title="Calculate">Calculate</div>
             <div class="nav-item inactive" title="Simulations">Simulations</div>
+            <div class="nav-item inactive" onclick="if(window.SessionManager) window.SessionManager.showOpenDialog()" title="Projects">Projects</div>
         </div>
     </nav>
 
@@ -365,6 +370,84 @@
                 }
             });
         }
+
+        /* -----------------------------------------
+           Left Panel Logic
+           ----------------------------------------- */
+        const resizerLeft = document.getElementById('dragHandleLeft');
+        const panelLeft = document.getElementById('sidePanelLeft');
+        const toggleWindowLeftBtn = document.getElementById('toggleWindowLeftBtn');
+
+        if (toggleWindowLeftBtn && panelLeft) {
+            toggleWindowLeftBtn.addEventListener('click', () => {
+                panelLeft.classList.toggle('transparent-mode');
+            });
+        }
+
+        let isResizingLeft = false;
+        if (resizerLeft && panelLeft) {
+            resizerLeft.addEventListener('mousedown', (e) => {
+                isResizingLeft = true;
+                resizerLeft.classList.add('active');
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+            });
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (isResizingLeft && panelLeft) {
+                let newWidth = window.innerWidth - e.clientX;
+                panelLeft.style.width = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizingLeft) {
+                isResizingLeft = false;
+                if (resizerLeft) resizerLeft.classList.remove('active');
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            }
+        });
+
+        /* -----------------------------------------
+           Right Panel Logic
+           ----------------------------------------- */
+        const resizerRight = document.getElementById('dragHandleRight');
+        const panelRight = document.getElementById('sidePanelRight');
+        const toggleWindowRightBtn = document.getElementById('toggleWindowRightBtn');
+        let isResizingRight = false;
+
+        if (toggleWindowRightBtn && panelRight) {
+            toggleWindowRightBtn.addEventListener('click', () => {
+                panelRight.classList.toggle('transparent-mode');
+            });
+        }
+
+        if (resizerRight && panelRight) {
+            resizerRight.addEventListener('mousedown', (e) => {
+                isResizingRight = true;
+                resizerRight.classList.add('active');
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+            });
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (isResizingRight && panelRight) {
+                let newWidth = e.clientX;
+                panelRight.style.width = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizingRight) {
+                isResizingRight = false;
+                if (resizerRight) resizerRight.classList.remove('active');
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            }
+        });
     </script>
 </body>
 

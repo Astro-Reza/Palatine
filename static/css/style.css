@@ -80,6 +80,36 @@ body {
     background-color: #e0e0e0;
 }
 
+.project-name-container {
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+}
+
+.project-name-input {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-main);
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    outline: none;
+    transition: all 0.2s;
+    width: 200px;
+}
+
+.project-name-input:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.project-name-input:focus {
+    background: var(--input-bg);
+    border-color: #555;
+    color: #fff;
+}
+
 .logo-dropdown {
     position: absolute;
     top: 49px;

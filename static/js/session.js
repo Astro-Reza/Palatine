@@ -212,8 +212,10 @@
             });
         }
 
-        // Update document title
+        // Update document title and UI
         document.title = `${_projectMeta.name} — Palatine 2.0`;
+        const nameInput = document.getElementById('projectNameInput');
+        if (nameInput) nameInput.value = _projectMeta.name;
 
         // 3. Reconstruct ISL tree from flat edge list
         if (window.islLinks && typeof window.islRenderTree === 'function') {
@@ -417,16 +419,74 @@
 
     const SessionManager = {
 
+        /** AutoSave: quietly save the current project state */
+        async autoSave() {
+            if (!_currentFilename) return false;
+            const state = collectSessionState();
+            try {
+                const resp = await fetch('/api/project/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state)
+                });
+                if (resp.ok) {
+                    const result = await resp.json();
+                    _currentFilename = result.filename;
+                    localStorage.setItem('activeProjectFilename', _currentFilename);
+                    return true;
+                }
+            } catch (err) {
+                console.error('autoSave error:', err);
+            }
+            return false;
+        },
+
+        /** Initialize the session on page load */
+        async initSession() {
+            const activeProject = localStorage.getItem('activeProjectFilename');
+            if (activeProject) {
+                try {
+                    const r = await fetch(`/api/project/open/${encodeURIComponent(activeProject)}`);
+                    if (r.ok) {
+                        const data = await r.json();
+                        applySessionState(data);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Failed to restore active project", e);
+                }
+            }
+
+            // If no active project or restore failed, create one automatically
+            const defaultName = `Project ${new Date().toLocaleDateString().replace(/\//g, '-')}`;
+            try {
+                const resp = await fetch('/api/project/new', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: defaultName })
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    clearCurrentSession();
+                    _currentFilename = result.filename;
+                    _projectMeta = result.project.project;
+                    document.title = `${_projectMeta.name} — Palatine 2.0`;
+                    
+                    const nameInput = document.getElementById('projectNameInput');
+                    if (nameInput) nameInput.value = _projectMeta.name;
+                    
+                    localStorage.setItem('activeProjectFilename', _currentFilename);
+                }
+            } catch (err) {
+                console.error('initSession error:', err);
+            }
+        },
+
         /** Check if unsaved changes exist and prompt user. Returns false if cancelled. */
         async checkUnsavedChanges() {
-            const currentConstellations = collectConstellations();
-            if (currentConstellations.length > 0) {
-                const choice = await showConfirm('Unsaved Changes', `Save changes to "${_projectMeta.name}" before proceeding?`, 'Save', "Don't Save");
-                if (choice === 'cancel') return false;
-                if (choice === 'yes') {
-                    const saved = await SessionManager.saveProject();
-                    if (!saved) return false; // Abort if save failed/cancelled
-                }
+            // With mandatory auto-save, we can just save it.
+            if (_currentFilename) {
+                await SessionManager.autoSave();
             }
             return true;
         },
@@ -652,8 +712,10 @@
         return String(v);
     }
 
-    // ── Wire up modal close button ──
+    // ── Wire up DOM events ──
     document.addEventListener('DOMContentLoaded', () => {
+        SessionManager.initSession();
+
         const modal = document.getElementById('openProjectModal');
         const closeBtn = document.getElementById('closeOpenModal');
 
@@ -663,6 +725,23 @@
         if (modal) {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) modal.style.display = 'none';
+            });
+        }
+
+        const nameInput = document.getElementById('projectNameInput');
+        if (nameInput) {
+            nameInput.addEventListener('blur', () => {
+                const val = nameInput.value.trim();
+                if (val !== '' && val !== _projectMeta.name) {
+                    _projectMeta.name = val;
+                    document.title = `${_projectMeta.name} — Palatine 2.0`;
+                    SessionManager.autoSave();
+                } else {
+                    nameInput.value = _projectMeta.name;
+                }
+            });
+            nameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') nameInput.blur();
             });
         }
     });

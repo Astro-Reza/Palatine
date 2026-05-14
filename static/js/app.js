@@ -1450,46 +1450,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 advanced: advData
             };
 
-            fetch('/api/save-constellation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(advData)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (window.editingConstellationIndex !== null && window.orbitManager) {
-                    const c = window.orbitManager.constellations[window.editingConstellationIndex];
-                    c.settings = Object.assign(c.settings, settings);
-                    if (window.orbitManager.scene) {
-                        window.orbitManager.scene.remove(c.satPoints);
-                        window.orbitManager.scene.remove(c.orbitGroup);
-                        window.orbitManager.scene.remove(c.beamMesh);
-                    }
-                    c.init3D();
-                    
-                    // Update ONLY the corresponding DOM element
-                    const allSections = getAllSections();
-                    const section = allSections[window.editingConstellationIndex];
-                    if (section) {
-                        section.querySelector('.section-header h3').textContent = settings.name;
-                        const values = section.querySelectorAll('.form-value');
-                        values[0].textContent = settings.satsPerPlane * settings.planes;
-                        values[1].textContent = settings.planes;
-                        values[2].textContent = settings.inclination;
-                        values[3].textContent = settings.apogee + '/' + settings.perigee + ' km';
-                    }
-                } else {
-                    if (window.orbitManager) {
-                        const constellation = window.orbitManager.addConstellation(settings);
-                        addConstellationToList(settings, constellation);
-                    }
+            // Commit configuration to the current project
+            if (window.editingConstellationIndex !== null && window.orbitManager) {
+                const c = window.orbitManager.constellations[window.editingConstellationIndex];
+                c.settings = Object.assign(c.settings, settings);
+                if (window.orbitManager.scene) {
+                    window.orbitManager.scene.remove(c.satPoints);
+                    window.orbitManager.scene.remove(c.orbitGroup);
+                    window.orbitManager.scene.remove(c.beamMesh);
                 }
-                const modal = document.getElementById('advancedSettingsModal');
-                if (modal) modal.style.display = 'none';
-            })
-            .catch(err => {
-                console.error('Error saving:', err);
-            });
+                c.init3D();
+                
+                // Update ONLY the corresponding DOM element
+                const allSections = getAllSections();
+                const section = allSections[window.editingConstellationIndex];
+                if (section) {
+                    section.querySelector('.section-header h3').textContent = settings.name;
+                    const values = section.querySelectorAll('.form-value');
+                    values[0].textContent = settings.satsPerPlane * settings.planes;
+                    values[1].textContent = settings.planes;
+                    values[2].textContent = settings.inclination;
+                    values[3].textContent = settings.apogee + '/' + settings.perigee + ' km';
+                }
+            } else {
+                if (window.orbitManager) {
+                    const constellation = window.orbitManager.addConstellation(settings);
+                    addConstellationToList(settings, constellation);
+                }
+            }
+
+            if (window.SessionManager) {
+                window.SessionManager.autoSave();
+            }
+
+            const modal = document.getElementById('advancedSettingsModal');
+            if (modal) modal.style.display = 'none';
         });
     }
 
