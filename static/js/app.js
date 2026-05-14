@@ -93,6 +93,142 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* -----------------------------------------
+       Floating AI Chatbot Logic
+       ----------------------------------------- */
+    const aiChatbot = document.getElementById('aiChatbot');
+    const aiChatbotHeader = document.getElementById('aiChatbotHeader');
+    const aiChatbotReopen = document.getElementById('aiChatbotReopen');
+    const aiCloseBtn = document.getElementById('aiCloseBtn');
+    const aiMinimizeBtn = document.getElementById('aiMinimizeBtn');
+    const aiDockLeftBtn = document.getElementById('aiDockLeftBtn');
+    const aiDockRightBtn = document.getElementById('aiDockRightBtn');
+    const aiDockFloatBtn = document.getElementById('aiDockFloatBtn');
+    const aiChatbotForm = document.getElementById('aiChatbotForm');
+    const aiChatbotInput = document.getElementById('aiChatbotInput');
+    const aiChatbotBody = aiChatbot ? aiChatbot.querySelector('.ai-chatbot-body') : null;
+    const aiDockLeft = document.getElementById('aiChatbotDockLeft');
+    const aiDockRight = document.getElementById('aiChatbotDockRight');
+    const middleArea = document.querySelector('.middle-area');
+
+    if (aiChatbot && aiChatbotHeader && middleArea) {
+        let chatMode = 'floating';
+        let dragState = null;
+        const floatingPosition = { left: 304, top: 399 };
+
+        function syncDockZones() {
+            if (aiDockLeft) aiDockLeft.classList.toggle('has-chatbot', chatMode === 'dock-left');
+            if (aiDockRight) aiDockRight.classList.toggle('has-chatbot', chatMode === 'dock-right');
+        }
+
+        function setFloatingPosition(left, top) {
+            const bounds = middleArea.getBoundingClientRect();
+            const maxLeft = Math.max(0, bounds.width - aiChatbot.offsetWidth - 8);
+            const maxTop = Math.max(0, bounds.height - aiChatbot.offsetHeight - 8);
+            floatingPosition.left = Math.min(Math.max(0, left), maxLeft);
+            floatingPosition.top = Math.min(Math.max(0, top), maxTop);
+            aiChatbot.style.left = `${floatingPosition.left}px`;
+            aiChatbot.style.top = `${floatingPosition.top}px`;
+        }
+
+        function setChatMode(nextMode) {
+            chatMode = nextMode;
+            aiChatbot.classList.toggle('docked', chatMode !== 'floating');
+
+            if (chatMode === 'dock-left' && aiDockLeft) {
+                aiDockLeft.appendChild(aiChatbot);
+            } else if (chatMode === 'dock-right' && aiDockRight) {
+                aiDockRight.appendChild(aiChatbot);
+            } else {
+                middleArea.appendChild(aiChatbot);
+                setFloatingPosition(floatingPosition.left, floatingPosition.top);
+            }
+
+            syncDockZones();
+        }
+
+        function openChatbot() {
+            aiChatbot.hidden = false;
+            if (aiChatbotReopen) aiChatbotReopen.hidden = true;
+            syncDockZones();
+        }
+
+        function closeChatbot() {
+            aiChatbot.hidden = true;
+            if (aiChatbotReopen) aiChatbotReopen.hidden = false;
+            if (aiDockLeft) aiDockLeft.classList.remove('has-chatbot');
+            if (aiDockRight) aiDockRight.classList.remove('has-chatbot');
+        }
+
+        aiChatbotHeader.addEventListener('mousedown', (e) => {
+            if (chatMode !== 'floating' || e.target.closest('button')) return;
+            const rect = aiChatbot.getBoundingClientRect();
+            dragState = {
+                offsetX: e.clientX - rect.left,
+                offsetY: e.clientY - rect.top
+            };
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!dragState) return;
+            const bounds = middleArea.getBoundingClientRect();
+            setFloatingPosition(e.clientX - bounds.left - dragState.offsetX, e.clientY - bounds.top - dragState.offsetY);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!dragState) return;
+            dragState = null;
+            document.body.style.userSelect = 'auto';
+        });
+
+        if (aiCloseBtn) {
+            aiCloseBtn.addEventListener('click', closeChatbot);
+        }
+
+        if (aiChatbotReopen) {
+            aiChatbotReopen.addEventListener('click', openChatbot);
+        }
+
+        if (aiMinimizeBtn) {
+            aiMinimizeBtn.addEventListener('click', () => {
+                aiChatbot.classList.toggle('minimized');
+                aiMinimizeBtn.textContent = aiChatbot.classList.contains('minimized') ? '+' : '-';
+                if (chatMode === 'floating') setFloatingPosition(floatingPosition.left, floatingPosition.top);
+            });
+        }
+
+        if (aiDockLeftBtn) {
+            aiDockLeftBtn.addEventListener('click', () => setChatMode('dock-left'));
+        }
+
+        if (aiDockRightBtn) {
+            aiDockRightBtn.addEventListener('click', () => setChatMode('dock-right'));
+        }
+
+        if (aiDockFloatBtn) {
+            aiDockFloatBtn.addEventListener('click', () => setChatMode('floating'));
+        }
+
+        if (aiChatbotForm && aiChatbotInput && aiChatbotBody) {
+            aiChatbotForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const text = aiChatbotInput.value.trim();
+                if (!text) return;
+
+                const message = document.createElement('div');
+                message.className = 'ai-chatbot-message user';
+                message.innerHTML = `<span class="ai-chatbot-message-label">You</span><p></p>`;
+                message.querySelector('p').textContent = text;
+                aiChatbotBody.appendChild(message);
+                aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+                aiChatbotInput.value = '';
+            });
+        }
+
+        setChatMode('floating');
+    }
+
+    /* -----------------------------------------
        View List Dropdown Logic
        ----------------------------------------- */
     const dropdownContainer = document.getElementById('viewSettingsDropdown');

@@ -128,6 +128,8 @@
                 </div>
             </div>
 
+            <div class="ai-chatbot-dock-zone" id="aiChatbotDockLeft" aria-label="Left chatbot dock"></div>
+
             <div class="sections-container" id="mainSectionsContainerRight">
                 <div class="sections-wrapper">
                     <!-- Constellations will be added here dynamically -->
@@ -201,6 +203,38 @@
                 </div>
             </div>
 
+            <section class="ai-chatbot" id="aiChatbot" aria-label="AI Agent chatbot" style="left: 304px; top: 399px;">
+                <header class="ai-chatbot-header" id="aiChatbotHeader">
+                    <div class="ai-chatbot-title-group">
+                        <span class="ai-chatbot-spark" aria-hidden="true"></span>
+                        <span class="ai-chatbot-title">AI Agent</span>
+                    </div>
+                    <div class="ai-chatbot-controls" aria-label="AI Agent controls">
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiDockLeftBtn" title="Dock left">L</button>
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiDockFloatBtn" title="Float">F</button>
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiDockRightBtn" title="Dock right">R</button>
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiMinimizeBtn" title="Minimize">-</button>
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiCloseBtn" title="Close">x</button>
+                    </div>
+                </header>
+                <div class="ai-chatbot-body">
+                    <div class="ai-chatbot-message assistant">
+                        <span class="ai-chatbot-message-label">AI Agent</span>
+                        <p>Telemetry sync is active. I can help review constellation changes and orbital parameters.</p>
+                    </div>
+                    <div class="ai-chatbot-message assistant">
+                        <span class="ai-chatbot-message-label">AI Agent</span>
+                        <p>Select a constellation and ask for a quick check.</p>
+                    </div>
+                </div>
+                <form class="ai-chatbot-input-row" id="aiChatbotForm">
+                    <input type="text" id="aiChatbotInput" placeholder="Ask AI Agent..." autocomplete="off">
+                    <button type="submit" title="Send">Send</button>
+                </form>
+            </section>
+
+            <button class="ai-chatbot-reopen" id="aiChatbotReopen" type="button" title="Open AI Agent" hidden>AI</button>
+
         </div>
 
         <div class="panel" id="sidePanelLeft">
@@ -227,6 +261,8 @@
                     <button class="time-btn sync-btn" id="utc-sync-btn" title="Sync UTC">UTC</button>
                 </div>
             </div>
+
+            <div class="ai-chatbot-dock-zone" id="aiChatbotDockRight" aria-label="Right chatbot dock"></div>
 
             <div class="sections-container" id="mainSectionsContainerLeft">
                 <div class="sections-wrapper">
