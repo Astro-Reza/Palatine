@@ -226,6 +226,7 @@
             } else {
                 section.classList.toggle('selected');
             }
+            updateThrowButtons();
         });
 
         // Detailed settings → reopen modal with this hardware's data
@@ -236,9 +237,263 @@
             document.getElementById('gs-hw-version').value = hw.version;
             modal.style.display = 'flex';
         });
+
+        setupDragAndDrop(section);
+        updateThrowButtons();
+    }
+
+    // ── Toolbar / Throw Buttons Logic ──
+    const throwDeleteBtn = document.getElementById('deleteBtn');
+    const focusBtn = document.getElementById('focusBtn');
+    const groupBtn = document.getElementById('group-constellations-btn');
+    const sectionsWrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+
+    function updateThrowButtons() {
+        const selectedCount = document.querySelectorAll('#mainSectionsContainerRight .selected').length;
+        if (selectedCount > 0) {
+            if (throwDeleteBtn) throwDeleteBtn.disabled = false;
+        } else {
+            if (throwDeleteBtn) throwDeleteBtn.disabled = true;
+        }
+    }
+
+    if (throwDeleteBtn) {
+        throwDeleteBtn.addEventListener('click', () => {
+            const selectedItems = Array.from(document.querySelectorAll('#mainSectionsContainerRight .selected'));
+            if (selectedItems.length === 0) return;
+
+            const sectionsToRemove = [];
+            selectedItems.forEach(item => {
+                if (item.classList.contains('section')) {
+                    sectionsToRemove.push(item);
+                } else if (item.classList.contains('group')) {
+                    item.querySelectorAll('.section').forEach(s => sectionsToRemove.push(s));
+                }
+            });
+
+            const uniqueSections = [...new Set(sectionsToRemove)];
+            
+            // Remove from DOM
+            uniqueSections.forEach(section => section.remove());
+            
+            // Remove empty groups and selected groups
+            selectedItems.forEach(item => {
+                if (item.classList.contains('group')) item.remove();
+            });
+            document.querySelectorAll('#mainSectionsContainerRight .group').forEach(group => {
+                if (group.querySelector('.group-content').children.length === 0) {
+                    group.remove();
+                }
+            });
+
+            updateThrowButtons();
+        });
+    }
+
+    // ── Group Logic ──
+    if (groupBtn) {
+        groupBtn.addEventListener('click', () => {
+            const container = sectionsWrapper;
+            if (!container) return;
+            const selectedItems = Array.from(document.querySelectorAll('#mainSectionsContainerRight .selected'));
+            if (selectedItems.length === 0) return;
+
+            const topLevelSelected = selectedItems.filter(item => {
+                let parent = item.parentElement;
+                while (parent && parent !== container) {
+                    if (parent.classList.contains('selected')) return false;
+                    parent = parent.parentElement;
+                }
+                return true;
+            });
+
+            if (topLevelSelected.length === 0) return;
+
+            const firstItem = topLevelSelected[0];
+            const group = addGroupToList("New Group", topLevelSelected, firstItem.parentElement, firstItem);
+            
+            document.querySelectorAll('#mainSectionsContainerRight .selected').forEach(el => el.classList.remove('selected'));
+            updateThrowButtons();
+        });
+    }
+
+    function addGroupToList(name = "New Group", children = [], parent = null, referenceNode = null) {
+        const container = sectionsWrapper;
+        if (!parent) parent = container;
+
+        const group = document.createElement('div');
+        group.className = 'group';
+        group.draggable = true;
+        group.innerHTML = `
+            <div class="group-header">
+                <div class="collapse-arrow"></div>
+                <img src="/static/icon/groupSats.svg" alt="Group">
+                <input type="text" class="group-name" value="${name}">
+            </div>
+            <div class="group-content"></div>
+        `;
+
+        if (referenceNode) {
+            parent.insertBefore(group, referenceNode);
+        } else {
+            parent.appendChild(group);
+        }
+
+        const content = group.querySelector('.group-content');
+        children.forEach(child => {
+            content.appendChild(child);
+        });
+
+        const arrow = group.querySelector('.collapse-arrow');
+        arrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            group.classList.toggle('collapsed');
+        });
+
+        group.addEventListener('click', (e) => {
+            if (e.target.closest('.group-name') || e.target.classList.contains('collapse-arrow')) return;
+            if (!e.ctrlKey && !e.metaKey) {
+                container.querySelectorAll('.section, .group').forEach(el => {
+                    if (el !== group) el.classList.remove('selected');
+                });
+                group.classList.toggle('selected');
+            } else {
+                group.classList.toggle('selected');
+            }
+            updateThrowButtons();
+        });
+
+        const nameInput = group.querySelector('.group-name');
+        nameInput.addEventListener('click', e => e.stopPropagation());
+
+        setupDragAndDrop(group);
+        return group;
+    }
+
+    // ── Drag and Drop Logic ──
+    let draggedElement = null;
+
+    function setupDragAndDrop(el) {
+        el.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.section-header') || e.target.closest('.group-header')) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                    el.draggable = false;
+                } else {
+                    el.draggable = true;
+                }
+            } else {
+                el.draggable = false;
+            }
+        });
+
+        el.addEventListener('dragstart', (e) => {
+            if (!el.draggable) {
+                e.preventDefault();
+                return;
+            }
+            e.stopPropagation();
+            draggedElement = el;
+            el.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', '');
+        });
+
+        el.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const rect = el.getBoundingClientRect();
+            el.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+
+            if (el.classList.contains('group')) {
+                const threshold = 15;
+                if (e.clientY < rect.top + threshold) {
+                    el.classList.add('drop-target-above');
+                } else if (e.clientY > rect.bottom - threshold) {
+                    el.classList.add('drop-target-below');
+                } else {
+                    el.classList.add('drop-target-inside');
+                }
+            } else {
+                const midpoint = rect.top + rect.height / 2;
+                if (e.clientY < midpoint) {
+                    el.classList.add('drop-target-above');
+                } else {
+                    el.classList.add('drop-target-below');
+                }
+            }
+        });
+
+        el.addEventListener('dragleave', () => {
+            el.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+        });
+
+        el.addEventListener('dragend', (e) => {
+            e.stopPropagation();
+            el.classList.remove('dragging');
+            document.querySelectorAll('.drop-target-above, .drop-target-below, .drop-target-inside').forEach(node => {
+                node.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+            });
+            if (sectionsWrapper) sectionsWrapper.classList.remove('drag-over-container');
+            draggedElement = null;
+        });
+
+        el.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            el.classList.remove('drop-target-above', 'drop-target-below', 'drop-target-inside');
+
+            if (!draggedElement || draggedElement === el) return;
+            if (draggedElement.contains(el)) return;
+
+            const rect = el.getBoundingClientRect();
+            const threshold = 15;
+
+            if (el.classList.contains('group') && 
+                e.clientY >= rect.top + threshold && 
+                e.clientY <= rect.bottom - threshold) {
+                const content = el.querySelector('.group-content');
+                content.appendChild(draggedElement);
+                el.classList.remove('collapsed');
+            } else {
+                const midpoint = rect.top + rect.height / 2;
+                if (e.clientY < midpoint) {
+                    el.parentNode.insertBefore(draggedElement, el);
+                } else {
+                    el.parentNode.insertBefore(draggedElement, el.nextSibling);
+                }
+            }
+            updateThrowButtons();
+        });
+    }
+
+    if (sectionsWrapper) {
+        sectionsWrapper.addEventListener('dragover', (e) => {
+            if (e.target === sectionsWrapper) {
+                e.preventDefault();
+                sectionsWrapper.classList.add('drag-over-container');
+            }
+        });
+
+        sectionsWrapper.addEventListener('dragleave', (e) => {
+            if (e.target === sectionsWrapper) {
+                sectionsWrapper.classList.remove('drag-over-container');
+            }
+        });
+
+        sectionsWrapper.addEventListener('drop', (e) => {
+            if (e.target === sectionsWrapper && draggedElement) {
+                e.preventDefault();
+                sectionsWrapper.classList.remove('drag-over-container');
+                sectionsWrapper.appendChild(draggedElement);
+                updateThrowButtons();
+            }
+        });
     }
 
     // Init
     renderStations();
+    updateThrowButtons();
 })();
 
