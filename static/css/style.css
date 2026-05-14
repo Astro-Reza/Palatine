@@ -3092,3 +3092,9 @@ select.form-input {
 .sub-settings.hidden {
     display: none;
 }
+
+#sidePanelLeft .section {
+    padding: 0;
+    border-bottom: none;
+    margin-bottom: 20px;
+}
