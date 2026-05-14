@@ -3128,3 +3128,293 @@ select.form-input {
     border-bottom: none;
     margin-bottom: 20px;
 }
+
+/* ===============================
+   Ground Settings Modal
+   =============================== */
+#groundSettingsModal .gs-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+#groundSettingsModal .gs-left {
+    width: 370px;
+    min-width: 370px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #111;
+    overflow: hidden;
+}
+
+#groundSettingsModal .gs-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#groundSettingsModal .gs-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bg-content);
+    padding: 16px 18px;
+    scrollbar-width: thin;
+    scrollbar-color: #303030 transparent;
+}
+
+#groundSettingsModal .gs-scroll::-webkit-scrollbar { width: 4px; }
+#groundSettingsModal .gs-scroll::-webkit-scrollbar-thumb { background: #303030; border-radius: 2px; }
+
+#groundSettingsModal .gs-section {
+    margin-bottom: 18px;
+}
+
+#groundSettingsModal .gs-section-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #ddd;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a2a;
+    letter-spacing: 0.2px;
+}
+
+#groundSettingsModal .gs-field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 7px;
+}
+
+#groundSettingsModal .gs-field-label {
+    font-size: 12px;
+    color: #888;
+    flex: 1;
+    padding-right: 12px;
+    white-space: nowrap;
+}
+
+#groundSettingsModal .gs-field-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+#groundSettingsModal .gs-field-unit {
+    font-size: 11px;
+    color: #4a4a4a;
+    min-width: 30px;
+    text-align: left;
+}
+
+#groundSettingsModal .gs-input,
+#groundSettingsModal .gs-select {
+    font-family: 'Geologica', sans-serif;
+    font-size: 12px;
+    background-color: #232323;
+    color: #d8d8d8;
+    border: 1px solid #2e2e2e;
+    border-radius: 4px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 116px;
+}
+
+#groundSettingsModal .gs-input:focus,
+#groundSettingsModal .gs-select:focus { border-color: #D9FF7F; }
+
+#groundSettingsModal .gs-input.wide,
+#groundSettingsModal .gs-select.wide { width: 158px; }
+
+#groundSettingsModal .gs-input.narrow { width: 82px; }
+
+#groundSettingsModal .gs-input.auto-calc {
+    width: 82px;
+    color: #D9FF7F;
+    background-color: #1d2010;
+    border-color: #3a4520;
+    cursor: default;
+}
+
+#groundSettingsModal .gs-input[type="number"]::-webkit-inner-spin-button,
+#groundSettingsModal .gs-input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+#groundSettingsModal .gs-input[type="number"] { -moz-appearance: textfield; }
+
+#groundSettingsModal .gs-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23505050' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 22px;
+    cursor: pointer;
+}
+
+#groundSettingsModal .gs-auto-hint {
+    font-size: 10px;
+    color: #3a4520;
+    font-style: italic;
+    margin-top: -4px;
+    margin-bottom: 4px;
+    text-align: right;
+}
+
+#groundSettingsModal .gs-bitrate-pair {
+    display: flex;
+    gap: 4px;
+}
+#groundSettingsModal .gs-bitrate-pair .gs-input { width: 58px; }
+#groundSettingsModal .gs-bitrate-pair .gs-select { width: 58px; padding-right: 18px; }
+
+#groundSettingsModal .gs-divider {
+    height: 1px;
+    background: #222;
+    margin: 14px 0;
+}
+
+/* Segmented control */
+#groundSettingsModal .gs-seg-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+#groundSettingsModal .gs-seg-control {
+    display: flex;
+    background: #202020;
+    border: 1px solid #2e2e2e;
+    border-radius: 5px;
+    padding: 2px;
+    gap: 2px;
+}
+
+#groundSettingsModal .gs-seg-btn {
+    font-family: 'Geologica', sans-serif;
+    font-size: 11.5px;
+    font-weight: 400;
+    background: none;
+    border: none;
+    color: #555;
+    padding: 5px 13px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+#groundSettingsModal .gs-seg-btn.active { background: #383838; color: #ddd; }
+#groundSettingsModal .gs-seg-btn:hover:not(.active) { color: #999; }
+
+/* Add station button */
+#groundSettingsModal .gs-add-btn {
+    font-family: 'Geologica', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    background: #D9FF7F;
+    color: #111;
+    border: none;
+    border-radius: 5px;
+    padding: 7px 22px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    float: right;
+    margin-top: 10px;
+}
+#groundSettingsModal .gs-add-btn:hover { opacity: 0.85; }
+
+/* Station list header */
+#groundSettingsModal .gs-list-header {
+    font-size: 11px;
+    color: #4a4a4a;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+}
+
+/* Station card */
+#groundSettingsModal .gs-station-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: #1f1f1f;
+    border: 1px solid #2a2a2a;
+    border-radius: 7px;
+    padding: 10px 12px;
+    margin-bottom: 7px;
+    transition: border-color 0.15s;
+}
+#groundSettingsModal .gs-station-card:hover { border-color: #363636; }
+
+#groundSettingsModal .gs-station-id {
+    font-size: 12px;
+    font-weight: 600;
+    color: #D9FF7F;
+    margin-bottom: 5px;
+    letter-spacing: 0.3px;
+}
+
+#groundSettingsModal .gs-station-coord {
+    font-size: 11px;
+    color: #555;
+    margin-bottom: 2px;
+    display: flex;
+    gap: 6px;
+}
+#groundSettingsModal .gs-station-coord span { color: #909090; }
+
+#groundSettingsModal .gs-station-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+
+#groundSettingsModal .gs-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #404040;
+    padding: 4px 5px;
+    border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#groundSettingsModal .gs-icon-btn svg { width: 13px; height: 13px; }
+#groundSettingsModal .gs-icon-btn:hover { color: #bbb; background: #2a2a2a; }
+#groundSettingsModal .gs-icon-btn.del:hover { color: #e05555; background: #2a1a1a; }
+
+/* Empty state */
+#groundSettingsModal .gs-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: calc(100% - 30px);
+    min-height: 220px;
+    color: #333;
+    font-size: 12px;
+    text-align: center;
+    gap: 8px;
+    user-select: none;
+}
+#groundSettingsModal .gs-empty-icon {
+    width: 32px;
+    height: 32px;
+    opacity: 0.3;
+}
+
+/* Preview placeholder */
+#groundSettingsModal .gs-preview-placeholder {
+    height: 100%;
+    min-height: 340px;
+    border: 1px dashed #242424;
+    border-radius: 8px;
+}

@@ -1,0 +1,244 @@
+/**
+ * Ground Settings Modal Logic
+ * Handles the Advanced Ground System Settings modal on the ground-system page.
+ */
+(function () {
+    const modal = document.getElementById('groundSettingsModal');
+    if (!modal) return;
+
+    const addBtn = document.getElementById('groundAddBtn');
+    const hwContainer = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+
+    // ── Open / Close ──
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            resetModal();
+            modal.style.display = 'flex';
+        });
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+
+    document.getElementById('gsCloseBtn').addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    document.getElementById('gsCancelBtn').addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    document.getElementById('gsResetBtn').addEventListener('click', () => {
+        resetModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            modal.style.display = 'none';
+        }
+    });
+
+    // ── Tab switching ──
+    document.querySelectorAll('#groundSettingsModal .tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('#groundSettingsModal .tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('#groundSettingsModal .gs-tab-panel').forEach(p => p.style.display = 'none');
+            tab.classList.add('active');
+            document.getElementById('gs-tab-' + tab.dataset.tab).style.display = 'flex';
+        });
+    });
+
+    // ── Segmented control ──
+    document.querySelectorAll('#groundSettingsModal .gs-seg-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.gs-seg-control').querySelectorAll('.gs-seg-btn')
+                .forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    // ── EIRP auto-calc ──
+    const ptInput = document.getElementById('gs-pt');
+    const gtInput = document.getElementById('gs-gt');
+    const eirpOutput = document.getElementById('gs-eirp');
+
+    function calcEIRP() {
+        const pt = parseFloat(ptInput.value) || 0;
+        const gt = parseFloat(gtInput.value) || 0;
+        eirpOutput.value = (pt + gt).toFixed(1);
+    }
+    if (ptInput) ptInput.addEventListener('input', calcEIRP);
+    if (gtInput) gtInput.addEventListener('input', calcEIRP);
+
+    // ── Station management (inside Geography tab) ──
+    let stations = [];
+    const genId = () => 'ID_' + Math.floor(10000000 + Math.random() * 89999999);
+
+    const editSvg = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5a1.5 1.5 0 0 1 2.121 2.121L5.5 12.743l-3 .757.757-3 8.243-8z"/></svg>`;
+    const delSvg = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>`;
+
+    window._gsRemoveStation = function (id) {
+        stations = stations.filter(s => s.id !== id);
+        renderStations();
+    };
+
+    function renderStations() {
+        const list = document.getElementById('gs-station-list');
+        const count = document.getElementById('gs-station-count');
+        const n = stations.length;
+        count.textContent = n + ' ground station' + (n !== 1 ? 's' : '') + ' deployed';
+
+        if (n === 0) {
+            list.innerHTML = `
+                <div class="gs-empty-state">
+                    <svg class="gs-empty-icon" viewBox="0 0 40 40" fill="none" stroke="#555" stroke-width="1.5">
+                        <circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="3"/>
+                        <line x1="20" y1="6" x2="20" y2="10"/><line x1="20" y1="30" x2="20" y2="34"/>
+                        <line x1="6" y1="20" x2="10" y2="20"/><line x1="30" y1="20" x2="34" y2="20"/>
+                    </svg>
+                    <span>No ground stations added yet</span>
+                </div>`;
+            return;
+        }
+
+        list.innerHTML = stations.map(s => `
+            <div class="gs-station-card">
+                <div>
+                    <div class="gs-station-id">${s.id}</div>
+                    <div class="gs-station-coord">Longitude: <span>${s.lon}</span></div>
+                    <div class="gs-station-coord">Latitude:&nbsp; <span>${s.lat}</span></div>
+                    <div class="gs-station-coord">Altitude:&nbsp; <span>${s.alt} m</span></div>
+                </div>
+                <div class="gs-station-actions">
+                    <button class="gs-icon-btn" title="Edit">${editSvg}</button>
+                    <button class="gs-icon-btn del" title="Delete" onclick="_gsRemoveStation('${s.id}')">${delSvg}</button>
+                </div>
+            </div>`).join('');
+    }
+
+    // Add single station
+    document.getElementById('gs-add-station-btn').addEventListener('click', () => {
+        const lon = parseFloat(document.getElementById('gs-in-lon').value).toFixed(6);
+        const lat = parseFloat(document.getElementById('gs-in-lat').value).toFixed(6);
+        const alt = document.getElementById('gs-in-alt').value;
+        stations.push({ id: genId(), lon, lat, alt });
+        renderStations();
+    });
+
+    // Add random stations
+    document.getElementById('gs-add-random-btn').addEventListener('click', () => {
+        const n = parseInt(document.getElementById('gs-rand-amount').value) || 1;
+        for (let i = 0; i < n; i++) {
+            stations.push({
+                id: genId(),
+                lon: (Math.random() * 360 - 180).toFixed(6),
+                lat: (Math.random() * 160 - 80).toFixed(6),
+                alt: Math.floor(Math.random() * 3000)
+            });
+        }
+        renderStations();
+    });
+
+    // ── Reset modal ──
+    function resetModal() {
+        stations = [];
+        renderStations();
+        document.getElementById('gs-hw-name').value = '';
+        document.getElementById('gs-hw-version').value = '';
+        // Reset to System tab
+        document.querySelectorAll('#groundSettingsModal .tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('#groundSettingsModal .gs-tab-panel').forEach(p => p.style.display = 'none');
+        document.querySelector('#groundSettingsModal .tab[data-tab="system"]').classList.add('active');
+        document.getElementById('gs-tab-system').style.display = 'flex';
+    }
+
+    // ── Save → add to Ground Hardware list ──
+    document.getElementById('gsSaveBtn').addEventListener('click', () => {
+        const name = document.getElementById('gs-hw-name').value || 'Untitled Hardware';
+        const version = document.getElementById('gs-hw-version').value || 'v1.0';
+        const antennaType = document.getElementById('gs-antenna-type').value;
+        const stationCount = stations.length;
+
+        addHardwareToList({ name, version, antennaType, stationCount, stations: [...stations] });
+        modal.style.display = 'none';
+    });
+
+    // ── Add hardware item to the right panel list ──
+    function addHardwareToList(hw) {
+        if (!hwContainer) return;
+        const section = document.createElement('div');
+        section.className = 'section';
+        section.innerHTML = `
+            <div class="section-header">
+                <div class="collapse-arrow"></div>
+                <h3>${hw.name}</h3>
+                <div class="header-icons">
+                    <div class="eye-toggle-btn">
+                        <img src="/static/icon/toogleView.svg" alt="Toggle View">
+                    </div>
+                    <img src="/static/icon/more1.svg" class="detailed-settings-btn" alt="Settings" title="Detailed Settings">
+                </div>
+            </div>
+            <div class="form-row">
+                <span class="form-label">Antenna Type</span>
+                <span class="form-value">${hw.antennaType}</span>
+            </div>
+            <div class="form-row">
+                <span class="form-label">Version</span>
+                <span class="form-value">${hw.version}</span>
+            </div>
+            <div class="form-row">
+                <span class="form-label">Stations</span>
+                <span class="form-value">${hw.stationCount}</span>
+            </div>
+            <div class="form-row">
+                <span class="form-label">Carrier Freq.</span>
+                <span class="form-value">20.0 GHz</span>
+            </div>
+        `;
+
+        hwContainer.appendChild(section);
+
+        // Collapse logic
+        const arrow = section.querySelector('.collapse-arrow');
+        arrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            section.classList.toggle('collapsed');
+        });
+
+        // Eye toggle
+        const eyeBtn = section.querySelector('.eye-toggle-btn');
+        eyeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            eyeBtn.classList.toggle('slashed');
+        });
+
+        // Selection logic
+        section.addEventListener('click', (e) => {
+            if (e.target.closest('.header-icons') || e.target.classList.contains('collapse-arrow')) return;
+
+            if (!e.ctrlKey && !e.metaKey) {
+                hwContainer.querySelectorAll('.section').forEach(el => {
+                    if (el !== section) el.classList.remove('selected');
+                });
+                section.classList.toggle('selected');
+            } else {
+                section.classList.toggle('selected');
+            }
+        });
+
+        // Detailed settings → reopen modal with this hardware's data
+        const settingsBtn = section.querySelector('.detailed-settings-btn');
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('gs-hw-name').value = hw.name;
+            document.getElementById('gs-hw-version').value = hw.version;
+            modal.style.display = 'flex';
+        });
+    }
+
+    // Init
+    renderStations();
+})();
+
