@@ -256,6 +256,13 @@ body {
     pointer-events: none;
 }
 
+#floating-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1100;
+    pointer-events: none;
+}
+
 .view-list-container {
     position: absolute;
     top: 15px;
@@ -1108,8 +1115,11 @@ select.form-input {
     gap: 8px;
 }
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
+=======
+>>>>>>> 95ad78ac0035650a160ee915ac2e22e4384c720e
 .ai-chatbot-toolbar-btn {
     position: relative;
     width: 34px;
@@ -1137,9 +1147,16 @@ select.form-input {
 .ai-chatbot-toolbar-btn img {
     width: 22px;
     height: 22px;
+<<<<<<< HEAD
 }
 
 >>>>>>> Stashed changes
+=======
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+>>>>>>> 95ad78ac0035650a160ee915ac2e22e4384c720e
 .btn {
     border: none;
     padding: 6px 14px;
@@ -1155,8 +1172,11 @@ select.form-input {
     transition: opacity 0.2s, transform 0.1s;
 }
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
+=======
+>>>>>>> 95ad78ac0035650a160ee915ac2e22e4384c720e
 /* ===============================
    Floating AI Chatbot
    =============================== */
@@ -1215,6 +1235,11 @@ select.form-input {
     width: 18px;
     height: 18px;
     flex: 0 0 auto;
+<<<<<<< HEAD
+=======
+    border-radius: 50%;
+    background: #ffffff;
+>>>>>>> 95ad78ac0035650a160ee915ac2e22e4384c720e
 }
 
 .ai-chatbot-title {
@@ -1414,6 +1439,7 @@ select.form-input {
 .ai-chatbot-message-actions {
     display: flex;
     align-items: center;
+<<<<<<< HEAD
     gap: 12px;
     margin-top: 6px;
 }
@@ -1443,6 +1469,34 @@ select.form-input {
 
 .ai-chatbot-action-btn:hover {
     transform: scale(1.2);
+=======
+    gap: 2px;
+}
+
+.ai-chatbot-action-btn {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 7px;
+    color: rgba(255, 255, 255, 0.62);
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.ai-chatbot-action-btn img {
+    width: 15px;
+    height: 15px;
+    display: block;
+    filter: brightness(0) invert(1);
+    opacity: 0.72;
+    transition: opacity 0.15s ease;
+}
+
+.ai-chatbot-action-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+>>>>>>> 95ad78ac0035650a160ee915ac2e22e4384c720e
 }
 
 .ai-chatbot-action-btn:hover img {
@@ -1705,7 +1759,10 @@ select.form-input {
     }
 }
 
+<<<<<<< HEAD
 >>>>>>> Stashed changes
+=======
+>>>>>>> 95ad78ac0035650a160ee915ac2e22e4384c720e
 .btn:hover {
     opacity: 0.9;
 }
