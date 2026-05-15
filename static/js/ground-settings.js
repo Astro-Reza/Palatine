@@ -106,6 +106,7 @@
             <div class="gs-station-card">
                 <div>
                     <div class="gs-station-id">${s.id}</div>
+                    ${s.city ? `<div class="gs-station-coord" style="color:#aaa;">${s.city}</div>` : ''}
                     <div class="gs-station-coord">Longitude: <span>${s.lon}</span></div>
                     <div class="gs-station-coord">Latitude:&nbsp; <span>${s.lat}</span></div>
                     <div class="gs-station-coord">Altitude:&nbsp; <span>${s.alt} m</span></div>
@@ -121,10 +122,97 @@
     document.getElementById('gs-add-station-btn').addEventListener('click', () => {
         const lon = parseFloat(document.getElementById('gs-in-lon').value).toFixed(6);
         const lat = parseFloat(document.getElementById('gs-in-lat').value).toFixed(6);
-        const alt = document.getElementById('gs-in-alt').value;
-        stations.push({ id: genId(), lon, lat, alt });
+        const alt = document.getElementById('gs-in-alt').value || 0;
+        const city = document.getElementById('gs-city-search') ? document.getElementById('gs-city-search').value : '';
+        stations.push({ id: genId(), lon, lat, alt, city });
         renderStations();
     });
+
+    // ── City Search Logic ──
+    let citiesData = [];
+    fetch('/static/textures/worldcities.csv')
+        .then(res => res.text())
+        .then(csv => {
+            const lines = csv.split('\n');
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                // Basic CSV parsing for this specific file format
+                const cols = lines[i].split('","');
+                if (cols.length >= 5) {
+                    const city = cols[1].replace(/^"|"$/g, '').trim();
+                    const lat = parseFloat(cols[2].replace(/^"|"$/g, ''));
+                    const lng = parseFloat(cols[3].replace(/^"|"$/g, ''));
+                    const country = cols[4].replace(/^"|"$/g, '').trim();
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        citiesData.push({ city, lat, lng, country });
+                    }
+                }
+            }
+        })
+        .catch(err => console.error("Failed to load cities data", err));
+
+    const citySearch = document.getElementById('gs-city-search');
+    const cityDropdown = document.getElementById('gs-city-dropdown');
+    const latInput = document.getElementById('gs-in-lat');
+    const lonInput = document.getElementById('gs-in-lon');
+
+    if (citySearch && cityDropdown && latInput && lonInput) {
+        const renderDropdown = (val = "") => {
+            cityDropdown.innerHTML = '';
+            let matches = [];
+            if (val.trim() === "") {
+                // Show first 50 cities as default if empty
+                matches = citiesData.slice(0, 50);
+            } else {
+                // Filter by substring
+                const query = val.trim().toLowerCase();
+                matches = citiesData.filter(c => c.city.toLowerCase().includes(query)).slice(0, 50);
+            }
+
+            if (matches.length === 0) {
+                const item = document.createElement('div');
+                item.className = 'gs-city-dropdown-item';
+                item.textContent = "No city found";
+                item.style.color = "#888";
+                item.style.pointerEvents = "none";
+                cityDropdown.appendChild(item);
+            } else {
+                matches.forEach(m => {
+                    const item = document.createElement('div');
+                    item.className = 'gs-city-dropdown-item';
+                    item.textContent = `${m.city}, ${m.country}`;
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        citySearch.value = `${m.city}, ${m.country}`;
+                        latInput.value = m.lat;
+                        lonInput.value = m.lng;
+                        cityDropdown.style.display = 'none';
+                    });
+                    cityDropdown.appendChild(item);
+                });
+            }
+            cityDropdown.style.display = 'block';
+        };
+
+        citySearch.addEventListener('focus', () => renderDropdown(citySearch.value));
+        citySearch.addEventListener('input', () => renderDropdown(citySearch.value));
+        citySearch.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (cityDropdown.style.display === 'none') renderDropdown(citySearch.value);
+        });
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target !== citySearch && !cityDropdown.contains(e.target)) {
+                cityDropdown.style.display = 'none';
+            }
+        });
+
+        // Clear city search if user manually edits coordinates
+        const clearCity = () => { citySearch.value = ''; };
+        latInput.addEventListener('input', clearCity);
+        lonInput.addEventListener('input', clearCity);
+    }
 
     // Add random stations
     document.getElementById('gs-add-random-btn').addEventListener('click', () => {

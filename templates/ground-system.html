@@ -586,6 +586,14 @@
                             <!-- Location & Geometry -->
                             <div class="gs-section">
                                 <div class="gs-section-title">Location &amp; Geometry</div>
+                                <div class="gs-field-row" style="position:relative;">
+                                    <span class="gs-field-label">City Search</span>
+                                    <div class="gs-field-right">
+                                        <input class="gs-input wide gs-city-search" id="gs-city-search" type="text" placeholder="Search city..." autocomplete="off">
+                                    </div>
+                                    <!-- Dropdown for search results -->
+                                    <div id="gs-city-dropdown" class="gs-dropdown-menu" style="display:none; position:absolute; top:100%; right:0; width:158px; background:#181818; border:1px solid #333; z-index:100; max-height:150px; overflow-y:auto; font-size:12px; margin-top:2px; border-radius:4px; box-shadow:0 4px 10px rgba(0,0,0,0.5);"></div>
+                                </div>
                                 <div class="gs-field-row">
                                     <span class="gs-field-label">Longitude</span>
                                     <div class="gs-field-right">
