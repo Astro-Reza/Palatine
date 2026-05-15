@@ -13,6 +13,10 @@ build/
 *.out
 *.a
 
+# Python virtual environment
+.venv/
+
+
 # Exclude the entire System Prompt folder
 System Prompt/
 database/
