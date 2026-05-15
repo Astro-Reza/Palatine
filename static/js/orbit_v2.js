@@ -478,6 +478,14 @@ class OrbitManager {
             this.scene.add(this.latLonGroup);
         }
 
+        // Ground Stations
+        this.groundStationGroup = new THREE.Group();
+        if (this.earthMesh) {
+            this.earthMesh.add(this.groundStationGroup);
+        } else {
+            this.scene.add(this.groundStationGroup);
+        }
+
         this.loadBoundaries();
         this.buildLatLonGrid();
     }
@@ -575,6 +583,49 @@ class OrbitManager {
             const geo = new THREE.BufferGeometry().setFromPoints(points);
             this.latLonGroup.add(new THREE.Line(geo, material));
         }
+    }
+
+    setGroundStations(stations) {
+        if (!this.groundStationGroup) return;
+
+        // Clear existing points
+        while (this.groundStationGroup.children.length > 0) {
+            const child = this.groundStationGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            this.groundStationGroup.remove(child);
+        }
+
+        if (!stations || stations.length === 0) return;
+
+        const geo = new THREE.BufferGeometry();
+        const positions = new Float32Array(stations.length * 3);
+        
+        stations.forEach((s, i) => {
+            const altMeters = parseFloat(s.alt) || 0;
+            // Radius 5 is the earth's surface
+            // The unit scale is 5 / 6371.
+            const r = 5.0 + ((altMeters / 1000) * (5 / 6371)) + 0.005; 
+            const vec = this.latLonToVector3(parseFloat(s.lat), parseFloat(s.lon), r);
+            positions[i * 3] = vec.x;
+            positions[i * 3 + 1] = vec.y;
+            positions[i * 3 + 2] = vec.z;
+        });
+
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        // Create a white dot material
+        const mat = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.1,
+            sizeAttenuation: true,
+            transparent: true,
+            opacity: 1.0,
+            depthWrite: false
+        });
+
+        const pointsMesh = new THREE.Points(geo, mat);
+        this.groundStationGroup.add(pointsMesh);
     }
 
     initMultiBeam() {

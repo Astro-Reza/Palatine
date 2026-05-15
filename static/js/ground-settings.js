@@ -257,6 +257,27 @@
         if (window.SessionManager) window.SessionManager.autoSave();
     }
 
+    // ── Update 3D render with all ground stations ──
+    window.updateGroundStationsRender = function() {
+        if (!window.orbitManager) return;
+        const allStations = [];
+        if (hwContainer) {
+            hwContainer.querySelectorAll('.section').forEach(section => {
+                if (section.dataset.hw) {
+                    try {
+                        const hw = JSON.parse(section.dataset.hw);
+                        if (hw.stations && Array.isArray(hw.stations)) {
+                            allStations.push(...hw.stations);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse hw dataset', e);
+                    }
+                }
+            });
+        }
+        window.orbitManager.setGroundStations(allStations);
+    };
+
     // ── Add hardware item to the right panel list ──
     window.addHardwareToList = function(hw) {
         if (!hwContainer) return;
@@ -334,6 +355,7 @@
 
         setupDragAndDrop(section);
         updateThrowButtons();
+        updateGroundStationsRender();
         return section;
     }
 
@@ -382,6 +404,7 @@
             });
 
             updateThrowButtons();
+            updateGroundStationsRender();
             triggerAutoSave();
         });
     }
@@ -594,5 +617,10 @@
     // Init
     renderStations();
     updateThrowButtons();
+    
+    // Add a small delay to ensure orbitManager is initialized
+    setTimeout(() => {
+        updateGroundStationsRender();
+    }, 500);
 })();
 
