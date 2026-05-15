@@ -460,6 +460,16 @@ class OrbitManager {
         // Multi-beam visualization for focused satellite
         this.initMultiBeam();
 
+        // Pre-load ground station textures
+        const texLoader = new THREE.TextureLoader();
+        this.antennaTextures = {
+            'Parabolic Dish': texLoader.load('/static/icon/Parabolic_ant.svg'),
+            'Phased Array': texLoader.load('/static/icon/PhasedArray_ant.svg'),
+            'Omnidirectional': texLoader.load('/static/icon/Omnidirectional_ant.svg'),
+            'Yagi': texLoader.load('/static/icon/Yagi_ant.svg'),
+            'Horn': texLoader.load('/static/icon/Horn_ant.svg')
+        };
+
         // Geographic boundaries
         this.boundaryGroup = new THREE.Group();
         this.boundaryGroup.visible = false;
@@ -588,7 +598,7 @@ class OrbitManager {
     setGroundStations(stations) {
         if (!this.groundStationGroup) return;
 
-        // Clear existing points
+        // Clear existing sprites
         while (this.groundStationGroup.children.length > 0) {
             const child = this.groundStationGroup.children[0];
             if (child.geometry) child.geometry.dispose();
@@ -598,34 +608,29 @@ class OrbitManager {
 
         if (!stations || stations.length === 0) return;
 
-        const geo = new THREE.BufferGeometry();
-        const positions = new Float32Array(stations.length * 3);
-        
-        stations.forEach((s, i) => {
+        stations.forEach(s => {
+            const type = s.antennaType || 'Parabolic Dish';
+            const tex = this.antennaTextures[type] || this.antennaTextures['Parabolic Dish'];
+            
+            const mat = new THREE.SpriteMaterial({
+                map: tex,
+                color: 0xffffff,
+                transparent: true,
+                depthWrite: false
+            });
+
+            const sprite = new THREE.Sprite(mat);
+            
             const altMeters = parseFloat(s.alt) || 0;
-            // Radius 5 is the earth's surface
-            // The unit scale is 5 / 6371.
             const r = 5.0 + ((altMeters / 1000) * (5 / 6371)) + 0.005; 
-            const vec = this.latLonToVector3(parseFloat(s.lat), parseFloat(s.lon), r);
-            positions[i * 3] = vec.x;
-            positions[i * 3 + 1] = vec.y;
-            positions[i * 3 + 2] = vec.z;
+            const pos = this.latLonToVector3(parseFloat(s.lat), parseFloat(s.lon), r);
+            
+            sprite.position.copy(pos);
+            // 0.15 is 150% of the previous 0.1 size
+            sprite.scale.set(0.15, 0.15, 1);
+            
+            this.groundStationGroup.add(sprite);
         });
-
-        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-        // Create a white dot material
-        const mat = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: 0.1,
-            sizeAttenuation: true,
-            transparent: true,
-            opacity: 1.0,
-            depthWrite: false
-        });
-
-        const pointsMesh = new THREE.Points(geo, mat);
-        this.groundStationGroup.add(pointsMesh);
     }
 
     initMultiBeam() {

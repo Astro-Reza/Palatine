@@ -8,6 +8,8 @@
 
     const addBtn = document.getElementById('groundAddBtn');
     const hwContainer = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+    let editingHardwareSection = null;
+    let editingStationId = null;
 
     // ── Open / Close ──
     if (addBtn) {
@@ -112,19 +114,43 @@
                     <div class="gs-station-coord">Altitude:&nbsp; <span>${s.alt} m</span></div>
                 </div>
                 <div class="gs-station-actions">
-                    <button class="gs-icon-btn" title="Edit">${editSvg}</button>
+                    <button class="gs-icon-btn" title="Edit" onclick="_gsEditStation('${s.id}')">${editSvg}</button>
                     <button class="gs-icon-btn del" title="Delete" onclick="_gsRemoveStation('${s.id}')">${delSvg}</button>
                 </div>
             </div>`).join('');
     }
 
-    // Add single station
+    window._gsEditStation = function (id) {
+        const s = stations.find(st => st.id === id);
+        if (!s) return;
+        editingStationId = id;
+        document.getElementById('gs-in-lon').value = s.lon;
+        document.getElementById('gs-in-lat').value = s.lat;
+        document.getElementById('gs-in-alt').value = s.alt;
+        if (document.getElementById('gs-city-search')) {
+            document.getElementById('gs-city-search').value = s.city || '';
+        }
+        document.getElementById('gs-add-station-btn').textContent = 'Update';
+    };
+
+    // Add or Update single station
     document.getElementById('gs-add-station-btn').addEventListener('click', () => {
         const lon = parseFloat(document.getElementById('gs-in-lon').value).toFixed(6);
         const lat = parseFloat(document.getElementById('gs-in-lat').value).toFixed(6);
         const alt = document.getElementById('gs-in-alt').value || 0;
         const city = document.getElementById('gs-city-search') ? document.getElementById('gs-city-search').value : '';
-        stations.push({ id: genId(), lon, lat, alt, city });
+        
+        if (editingStationId) {
+            const idx = stations.findIndex(s => s.id === editingStationId);
+            if (idx !== -1) {
+                stations[idx] = { ...stations[idx], lon, lat, alt, city };
+            }
+            editingStationId = null;
+            document.getElementById('gs-add-station-btn').textContent = 'Add';
+        } else {
+            stations.push({ id: genId(), lon, lat, alt, city });
+        }
+        
         renderStations();
     });
 
@@ -230,8 +256,11 @@
 
     // ── Reset modal ──
     function resetModal() {
+        editingHardwareSection = null;
+        editingStationId = null;
         stations = [];
         renderStations();
+        document.getElementById('gs-add-station-btn').textContent = 'Add';
         document.getElementById('gs-hw-name').value = '';
         document.getElementById('gs-hw-version').value = '';
         // Reset to System tab
@@ -241,14 +270,30 @@
         document.getElementById('gs-tab-system').style.display = 'flex';
     }
 
-    // ── Save → add to Ground Hardware list ──
+    // ── Save → add or update Ground Hardware list ──
     document.getElementById('gsSaveBtn').addEventListener('click', () => {
         const name = document.getElementById('gs-hw-name').value || 'Untitled Hardware';
         const version = document.getElementById('gs-hw-version').value || 'v1.0';
         const antennaType = document.getElementById('gs-antenna-type').value;
         const stationCount = stations.length;
+        const hwData = { name, version, antennaType, stationCount, stations: [...stations] };
 
-        addHardwareToList({ name, version, antennaType, stationCount, stations: [...stations] });
+        if (editingHardwareSection) {
+            // Update existing
+            editingHardwareSection.dataset.hw = JSON.stringify(hwData);
+            editingHardwareSection.querySelector('h3').textContent = name;
+            const rows = editingHardwareSection.querySelectorAll('.form-row .form-value');
+            if (rows.length >= 3) {
+                rows[0].textContent = antennaType;
+                rows[1].textContent = version;
+                rows[2].textContent = stationCount;
+            }
+            updateGroundStationsRender();
+        } else {
+            // Add new
+            addHardwareToList(hwData);
+        }
+
         triggerAutoSave();
         modal.style.display = 'none';
     });
@@ -267,7 +312,12 @@
                     try {
                         const hw = JSON.parse(section.dataset.hw);
                         if (hw.stations && Array.isArray(hw.stations)) {
-                            allStations.push(...hw.stations);
+                            // Attach antenna type to each station for 3D rendering
+                            const stationsWithType = hw.stations.map(s => ({
+                                ...s,
+                                antennaType: hw.antennaType
+                            }));
+                            allStations.push(...stationsWithType);
                         }
                     } catch (e) {
                         console.error('Failed to parse hw dataset', e);
@@ -348,8 +398,19 @@
         const settingsBtn = section.querySelector('.detailed-settings-btn');
         settingsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            document.getElementById('gs-hw-name').value = hw.name;
-            document.getElementById('gs-hw-version').value = hw.version;
+            const currentHw = JSON.parse(section.dataset.hw);
+            editingHardwareSection = section;
+            
+            document.getElementById('gs-hw-name').value = currentHw.name;
+            document.getElementById('gs-hw-version').value = currentHw.version;
+            if (document.getElementById('gs-antenna-type')) {
+                document.getElementById('gs-antenna-type').value = currentHw.antennaType;
+            }
+            
+            // Populate stations list in modal
+            stations = currentHw.stations ? [...currentHw.stations] : [];
+            renderStations();
+            
             modal.style.display = 'flex';
         });
 

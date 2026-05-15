@@ -3189,7 +3189,7 @@ select.form-input {
     overflow-y: auto;
     overflow-x: hidden;
     background: var(--bg-content);
-    padding: 16px 18px;
+    padding: 16px 0;
     scrollbar-width: thin;
     scrollbar-color: #303030 transparent;
 }
@@ -3388,6 +3388,7 @@ select.form-input {
     font-size: 11px;
     color: #4a4a4a;
     margin-bottom: 12px;
+    padding: 0 18px;
     letter-spacing: 0.3px;
 }
 
@@ -3397,13 +3398,17 @@ select.form-input {
     justify-content: space-between;
     align-items: flex-start;
     background: #1f1f1f;
-    border: 1px solid #2a2a2a;
-    border-radius: 7px;
-    padding: 10px 12px;
-    margin-bottom: 7px;
-    transition: border-color 0.15s;
+    border: none;
+    border-bottom: 1px solid #2a2a2a;
+    border-radius: 0;
+    padding: 12px 18px;
+    margin-bottom: 0;
+    transition: background 0.15s;
 }
-#groundSettingsModal .gs-station-card:hover { border-color: #363636; }
+#groundSettingsModal .gs-station-card:first-child {
+    border-top: 1px solid #2a2a2a;
+}
+#groundSettingsModal .gs-station-card:hover { background: #242424; }
 
 #groundSettingsModal .gs-station-id {
     font-size: 12px;
