@@ -180,6 +180,10 @@
             <div class="throw-button-container">
                 <div class="toolbar">
                     <div class="toggle-group">
+                        <button class="ai-chatbot-toolbar-btn" id="aiChatbotReopen" type="button" title="Open Arcturus" aria-label="Open Arcturus">
+                            <img src="/static/icons/palatine-chatbot-logo.svg" alt="">
+                            <span class="ai-chatbot-launcher-status" aria-hidden="true"></span>
+                        </button>
                         <span class="toggle-label" id="viewLabel">3d View</span>
                         <label class="switch">
                             <input type="checkbox" id="viewToggle" checked>
@@ -200,6 +204,38 @@
                     </div>
                 </div>
             </div>
+
+            <div id="floating-layer"></div>
+
+            <section class="ai-chatbot" id="aiChatbot" aria-label="Arcturus chatbot">
+                <header class="ai-chatbot-header" id="aiChatbotHeader">
+                    <div class="ai-chatbot-title-group">
+                        <img class="ai-chatbot-logo" src="/static/icons/palatine-chatbot-logo.svg" alt="">
+                        <span class="ai-chatbot-title">Arcturus</span>
+                    </div>
+                    <div class="ai-chatbot-controls" aria-label="Arcturus controls">
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiMinimizeBtn" title="Minimize">-</button>
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiCloseBtn" title="Close">x</button>
+                    </div>
+                </header>
+                <div class="ai-chatbot-body" id="aiChatbotMessages">
+                    <div class="ai-chatbot-message assistant">
+                        <div class="ai-chatbot-message-content">
+                            <p>Telemetry sync is active. I can help review constellation changes and orbital parameters.</p>
+                        </div>
+                    </div>
+                    <div class="ai-chatbot-message assistant">
+                        <div class="ai-chatbot-message-content">
+                            <p>Select a constellation and ask for a quick check.</p>
+                        </div>
+                    </div>
+                </div>
+                <form class="ai-chatbot-input-row" id="aiChatbotForm">
+                    <input type="text" id="aiChatbotInput" placeholder="Ask Arcturus..." autocomplete="off">
+                    <button type="submit" title="Send">Send</button>
+                </form>
+                <button class="ai-chatbot-resize-handle" id="aiChatbotResizeHandle" type="button" aria-label="Resize Arcturus"></button>
+            </section>
 
         </div>
 
