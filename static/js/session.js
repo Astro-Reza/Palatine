@@ -10,6 +10,7 @@
 
     // ── Internal state ──
     let _currentFilename = null;   // YAML filename on disk (null = unsaved)
+    let _lastLoadedState = null;   // Holds the last fetched project state
     let _projectMeta = {
         name: 'Untitled Project',
         created: new Date().toISOString(),
@@ -122,24 +123,57 @@
         return edges;
     }
 
+    function collectGroundStations() {
+        const stations = [];
+        const sections = document.querySelectorAll('#mainSectionsContainerRight .section');
+        sections.forEach(section => {
+            if (section.dataset.hw) {
+                try {
+                    stations.push(JSON.parse(section.dataset.hw));
+                } catch (e) {
+                    console.error("Error parsing ground hardware dataset", e);
+                }
+            }
+        });
+        return stations;
+    }
+
     /** Build a full project state object for saving. */
     function collectSessionState() {
+        const isGroundSystem = window.location.pathname.includes('ground-system');
+        const isSpaceSystem = !isGroundSystem;
         const wrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
-        return {
+
+        // Start from last loaded state or a fresh skeleton
+        let state = _lastLoadedState ? JSON.parse(JSON.stringify(_lastLoadedState)) : {
             project: {
                 name: _projectMeta.name,
                 created: _projectMeta.created,
                 modified: new Date().toISOString(),
                 version: _projectMeta.version
             },
-            constellations: collectConstellations(),
-            hierarchy: collectHierarchy(wrapper),
-            isl_links: collectISLLinks(),
+            constellations: [],
+            hierarchy: [],
+            isl_links: [],
             ground_stations: [],
             simulation: {},
-            analysis_results: {},
-            _filename: _currentFilename
+            analysis_results: {}
         };
+
+        state.project.name = _projectMeta.name;
+        state.project.modified = new Date().toISOString();
+        state._filename = _currentFilename;
+
+        if (isSpaceSystem) {
+            state.constellations = collectConstellations();
+            if (wrapper) state.hierarchy = collectHierarchy(wrapper);
+            state.isl_links = collectISLLinks();
+        } else if (isGroundSystem) {
+            state.ground_stations = collectGroundStations();
+            if (wrapper) state.ground_hierarchy = collectHierarchy(wrapper);
+        }
+
+        return state;
     }
 
     /** Clear all constellations from the scene and the right panel. */
@@ -168,100 +202,142 @@
         if (wrapper) wrapper.innerHTML = '';
     }
 
-    /** Load constellations from project data into the app. */
+    /** Load project data into the app. */
     function applySessionState(projectData) {
+        window._isApplyingSession = true;
+        _lastLoadedState = JSON.parse(JSON.stringify(projectData));
         clearCurrentSession();
 
         _projectMeta = projectData.project || _projectMeta;
         _currentFilename = projectData._filename || null;
 
-        // 1. Add all constellations to orbitManager first
-        const constellations = projectData.constellations || [];
-        constellations.forEach(c => {
-            const settings = {
-                inclination: parseFloat(c.orbit?.inclination ?? 53),
-                planes: parseInt(c.orbit?.orbital_planes ?? 20),
-                satsPerPlane: parseInt(c.orbit?.sats_per_plane ?? 22),
-                apogee: parseFloat(c.orbit?.apogee ?? 550),
-                perigee: parseFloat(c.orbit?.perigee ?? 550),
-                beamQuantity: parseInt(c.payload?.beam_quantity ?? 24),
-                beamSize: parseFloat(c.payload?.beam_size ?? 300),
-                name: c.name || 'Unnamed',
-                advanced: c
-            };
+        const isGroundSystem = window.location.pathname.includes('ground-system');
+        const isSpaceSystem = !isGroundSystem;
 
-            if (window.orbitManager) {
-                window.orbitManager.addConstellation(settings);
-            }
-        });
+        if (isSpaceSystem) {
+            // 1. Add all constellations to orbitManager first
+            const constellations = projectData.constellations || [];
+            constellations.forEach(c => {
+                const settings = {
+                    inclination: parseFloat(c.orbit?.inclination ?? 53),
+                    planes: parseInt(c.orbit?.orbital_planes ?? 20),
+                    satsPerPlane: parseInt(c.orbit?.sats_per_plane ?? 22),
+                    apogee: parseFloat(c.orbit?.apogee ?? 550),
+                    perigee: parseFloat(c.orbit?.perigee ?? 550),
+                    beamQuantity: parseInt(c.payload?.beam_quantity ?? 24),
+                    beamSize: parseFloat(c.payload?.beam_size ?? 300),
+                    name: c.name || 'Unnamed',
+                    advanced: c
+                };
 
-        // 2. Rebuild DOM hierarchy
-        const wrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
-        const hierarchy = projectData.hierarchy || [];
-
-        if (hierarchy.length > 0) {
-            rebuildHierarchyDOM(hierarchy, wrapper, constellations);
-        } else {
-            // Fallback for old projects without hierarchy
-            constellations.forEach((c, idx) => {
-                if (window.addConstellationToList) {
-                    const constellationObj = window.orbitManager.constellations[idx];
-                    const settings = constellationObj.settings;
-                    window.addConstellationToList(settings, constellationObj);
+                if (window.orbitManager) {
+                    window.orbitManager.addConstellation(settings);
                 }
             });
+
+            // 2. Rebuild DOM hierarchy
+            const wrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+            const hierarchy = projectData.hierarchy || [];
+
+            if (hierarchy.length > 0) {
+                rebuildHierarchyDOM(hierarchy, wrapper, constellations);
+            } else {
+                // Fallback for old projects without hierarchy
+                constellations.forEach((c, idx) => {
+                    if (window.addConstellationToList) {
+                        const constellationObj = window.orbitManager.constellations[idx];
+                        const settings = constellationObj.settings;
+                        window.addConstellationToList(settings, constellationObj);
+                    }
+                });
+            }
+
+            // 3. Reconstruct ISL tree from flat edge list
+            if (window.islLinks && typeof window.islRenderTree === 'function') {
+                const edges = projectData.isl_links || [];
+                window.islLinks.length = 0; // Clear array
+                
+                // Helper to get name by ID
+                function getNameById(id) {
+                    const c = constellations.find(c => c.id === id);
+                    return c ? c.name : null;
+                }
+                
+                // Build tree from edges
+                const nodeMap = {};
+                
+                // Create nodes
+                edges.forEach(edge => {
+                    const sourceName = getNameById(edge.source);
+                    const targetName = getNameById(edge.target);
+                    
+                    if (sourceName && targetName) {
+                        if (!nodeMap[sourceName]) nodeMap[sourceName] = { name: sourceName, children: [] };
+                        if (!nodeMap[targetName]) nodeMap[targetName] = { name: targetName, children: [] };
+                        
+                        // Prevent circular references in tree representation
+                        const isAlreadyDescendant = (parent, childName) => {
+                            if (parent.name === childName) return true;
+                            return parent.children.some(c => isAlreadyDescendant(c, childName));
+                        };
+                        
+                        if (!isAlreadyDescendant(nodeMap[targetName], sourceName)) {
+                            nodeMap[sourceName].children.push(nodeMap[targetName]);
+                        }
+                    }
+                });
+                
+                // Find root nodes (nodes that are never targets)
+                const targets = new Set(edges.map(e => getNameById(e.target)).filter(Boolean));
+                Object.values(nodeMap).forEach(node => {
+                    if (!targets.has(node.name)) {
+                        window.islLinks.push(node);
+                    }
+                });
+                
+                window.islRenderTree();
+            }
+        } else if (isGroundSystem) {
+            // Rebuild Ground Stations
+            const groundStations = projectData.ground_stations || [];
+            const wrapper = document.querySelector('#mainSectionsContainerRight .sections-wrapper');
+            const hierarchy = projectData.ground_hierarchy || [];
+            
+            if (window.addHardwareToList) {
+                if (hierarchy.length > 0 && wrapper) {
+                    rebuildGroundHierarchyDOM(hierarchy, wrapper, groundStations);
+                } else {
+                    groundStations.forEach(hw => {
+                        window.addHardwareToList(hw);
+                    });
+                }
+            }
         }
 
         // Update document title and UI
         document.title = `${_projectMeta.name} — Palatine 2.0`;
         const nameInput = document.getElementById('projectNameInput');
         if (nameInput) nameInput.value = _projectMeta.name;
+        
+        window._isApplyingSession = false;
+    }
 
-        // 3. Reconstruct ISL tree from flat edge list
-        if (window.islLinks && typeof window.islRenderTree === 'function') {
-            const edges = projectData.isl_links || [];
-            window.islLinks.length = 0; // Clear array
-            
-            // Helper to get name by ID
-            function getNameById(id) {
-                const c = constellations.find(c => c.id === id);
-                return c ? c.name : null;
+    function rebuildGroundHierarchyDOM(items, parent, groundStations) {
+        items.forEach(item => {
+            if (item.type === 'constellation') { // Reuse same type logic from collectHierarchy
+                const hw = groundStations[item.index];
+                if (hw && window.addHardwareToList) {
+                    const section = window.addHardwareToList(hw);
+                    parent.appendChild(section);
+                }
+            } else if (item.type === 'group') {
+                if (window.addGroundGroupToList) {
+                    const group = window.addGroundGroupToList(item.name, [], parent);
+                    const groupContent = group.querySelector('.group-content');
+                    rebuildGroundHierarchyDOM(item.children, groupContent, groundStations);
+                }
             }
-            
-            // Build tree from edges
-            const nodeMap = {};
-            
-            // Create nodes
-            edges.forEach(edge => {
-                const sourceName = getNameById(edge.source);
-                const targetName = getNameById(edge.target);
-                
-                if (sourceName && targetName) {
-                    if (!nodeMap[sourceName]) nodeMap[sourceName] = { name: sourceName, children: [] };
-                    if (!nodeMap[targetName]) nodeMap[targetName] = { name: targetName, children: [] };
-                    
-                    // Prevent circular references in tree representation
-                    const isAlreadyDescendant = (parent, childName) => {
-                        if (parent.name === childName) return true;
-                        return parent.children.some(c => isAlreadyDescendant(c, childName));
-                    };
-                    
-                    if (!isAlreadyDescendant(nodeMap[targetName], sourceName)) {
-                        nodeMap[sourceName].children.push(nodeMap[targetName]);
-                    }
-                }
-            });
-            
-            // Find root nodes (nodes that are never targets)
-            const targets = new Set(edges.map(e => getNameById(e.target)).filter(Boolean));
-            Object.values(nodeMap).forEach(node => {
-                if (!targets.has(node.name)) {
-                    window.islLinks.push(node);
-                }
-            });
-            
-            window.islRenderTree();
-        }
+        });
     }
 
     function rebuildHierarchyDOM(items, parent, constellations) {
@@ -421,6 +497,7 @@
 
         /** AutoSave: quietly save the current project state */
         async autoSave() {
+            if (window._isApplyingSession) return false;
             if (!_currentFilename) return false;
             const state = collectSessionState();
             try {

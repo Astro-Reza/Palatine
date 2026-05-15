@@ -161,14 +161,20 @@
         const stationCount = stations.length;
 
         addHardwareToList({ name, version, antennaType, stationCount, stations: [...stations] });
+        triggerAutoSave();
         modal.style.display = 'none';
     });
 
+    function triggerAutoSave() {
+        if (window.SessionManager) window.SessionManager.autoSave();
+    }
+
     // ── Add hardware item to the right panel list ──
-    function addHardwareToList(hw) {
+    window.addHardwareToList = function(hw) {
         if (!hwContainer) return;
         const section = document.createElement('div');
         section.className = 'section';
+        section.dataset.hw = JSON.stringify(hw);
         section.innerHTML = `
             <div class="section-header">
                 <div class="collapse-arrow"></div>
@@ -240,6 +246,7 @@
 
         setupDragAndDrop(section);
         updateThrowButtons();
+        return section;
     }
 
     // ── Toolbar / Throw Buttons Logic ──
@@ -287,6 +294,7 @@
             });
 
             updateThrowButtons();
+            triggerAutoSave();
         });
     }
 
@@ -310,14 +318,15 @@
             if (topLevelSelected.length === 0) return;
 
             const firstItem = topLevelSelected[0];
-            const group = addGroupToList("New Group", topLevelSelected, firstItem.parentElement, firstItem);
+            const group = window.addGroundGroupToList("New Group", topLevelSelected, firstItem.parentElement, firstItem);
             
             document.querySelectorAll('#mainSectionsContainerRight .selected').forEach(el => el.classList.remove('selected'));
             updateThrowButtons();
+            triggerAutoSave();
         });
     }
 
-    function addGroupToList(name = "New Group", children = [], parent = null, referenceNode = null) {
+    window.addGroundGroupToList = function(name = "New Group", children = [], parent = null, referenceNode = null) {
         const container = sectionsWrapper;
         if (!parent) parent = container;
 
@@ -465,6 +474,7 @@
                 }
             }
             updateThrowButtons();
+            triggerAutoSave();
         });
     }
 
@@ -488,6 +498,7 @@
                 sectionsWrapper.classList.remove('drag-over-container');
                 sectionsWrapper.appendChild(draggedElement);
                 updateThrowButtons();
+                triggerAutoSave();
             }
         });
     }
