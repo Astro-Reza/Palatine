@@ -478,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
             aiChatbot.hidden = false;
             aiChatbot.classList.remove('minimized');
             if (chatMode === 'floating') setBottomLeftFloatingPosition();
-            if (aiMinimizeBtn) aiMinimizeBtn.textContent = '-';
             if (aiState === 'success' || aiState === 'failed') aiState = 'idle';
             clearLauncherState();
         }
