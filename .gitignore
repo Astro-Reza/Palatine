@@ -15,10 +15,12 @@ build/
 
 # Python virtual environment
 .venv/
+.env/
 
 
 # Exclude the entire System Prompt folder
 System Prompt/
+codingInstruction/
 database/
 templates-input/
 ISL-FILE-MANAGEMENT.md

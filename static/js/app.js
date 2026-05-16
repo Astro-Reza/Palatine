@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reasoning.dataset.startedAt = String(Date.now());
             reasoning.innerHTML = `
                 <button class="ai-chatbot-reasoning-trigger" type="button" aria-expanded="true">
-                    <span class="ai-chatbot-reasoning-brain" aria-hidden="true">🧠</span>
+                    <img class="ai-chatbot-reasoning-icon" src="${thinkingFrames[0]}" alt="">
                     <span class="ai-chatbot-reasoning-label is-thinking">Thinking...</span>
                     <svg class="ai-chatbot-reasoning-chevron" viewBox="0 0 16 16" aria-hidden="true">
                         <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -396,36 +396,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        function startOpenChatbotThinkingAnimation(icon, textNode) {
-            if (!icon) return;
+        function startOpenChatbotThinkingAnimation(icons = [], textNodes = []) {
             stopOpenChatbotThinkingAnimation();
             thinkingFrameIndex = 0;
-            icon.src = thinkingFrames[thinkingFrameIndex];
+            
+            const updateFrames = () => {
+                const iconSrc = thinkingFrames[thinkingFrameIndex];
+                icons.forEach(icon => { if (icon) icon.src = iconSrc; });
+                
+                const dots = '.'.repeat(thinkingFrameIndex);
+                textNodes.forEach(node => {
+                    if (node) {
+                        node.textContent = 'Processing' + dots;
+                    }
+                });
+            };
+
+            updateFrames();
             thinkingAnimationTimer = window.setInterval(() => {
                 thinkingFrameIndex = (thinkingFrameIndex + 1) % thinkingFrames.length;
-                icon.src = thinkingFrames[thinkingFrameIndex];
-                if (textNode && thinkingFrameIndex === 0) {
-                    const currentStatusIndex = statusLabels.indexOf(textNode.textContent);
-                    textNode.textContent = statusLabels[(currentStatusIndex + 1) % statusLabels.length];
-                }
-            }, 180);
+                updateFrames();
+            }, 250);
         }
 
         function appendThinkingRow(text, parent = aiChatbotBody) {
             if (!parent) return null;
             const row = document.createElement('div');
             row.className = 'chatbot-thinking-row';
-            row.innerHTML = `
-                <img class="chatbot-thinking-icon" src="${thinkingFrames[0]}" alt="Arcturus thinking">
-                <span class="chatbot-thinking-text"></span>
-            `;
+            row.innerHTML = `<span class="chatbot-thinking-text"></span>`;
             row.querySelector('.chatbot-thinking-text').textContent = text;
             parent.appendChild(row);
             aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
-            startOpenChatbotThinkingAnimation(
-                row.querySelector('.chatbot-thinking-icon'),
-                row.querySelector('.chatbot-thinking-text')
-            );
             return row;
         }
 
@@ -436,7 +437,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const statusText = statusLabels[(requestId - 1) % statusLabels.length];
             aiState = 'thinking';
             const pendingAssistant = createPendingAssistantMessage();
-            const thinkingRow = appendThinkingRow(statusText, pendingAssistant?.message);
+            const thinkingRow = appendThinkingRow('Processing', pendingAssistant?.message);
+            
+            const rIcon = pendingAssistant?.reasoning?.querySelector('.ai-chatbot-reasoning-icon');
+            const tText = thinkingRow?.querySelector('.chatbot-thinking-text');
+            startOpenChatbotThinkingAnimation([rIcon], [tText]);
+            
             setLauncherState('thinking');
 
             window.setTimeout(() => {
