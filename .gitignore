@@ -1,4 +1,3 @@
-```
 # Compiled and build artifacts
 *.pyc
 __pycache__/
@@ -15,7 +14,7 @@ build/
 
 # Python virtual environment
 .venv/
-.env/
+.env
 
 
 # Exclude the entire System Prompt folder
