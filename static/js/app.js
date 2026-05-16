@@ -119,6 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let thinkingAnimationTimer = null;
         let thinkingFrameIndex = 0;
         let latestPrompt = '';
+        let aiChatMode = 'think'; // 'think' or 'instant'
+        const aiChatbotModeToggle = document.getElementById('aiChatbotModeToggle');
         const floatingPosition = { left: 16, top: 16 };
         const SNAP_THRESHOLD = 48;
         const statusLabels = ['Thinking...', 'Reasoning...', 'Processing...'];
@@ -430,48 +432,121 @@ document.addEventListener('DOMContentLoaded', () => {
             return row;
         }
 
-        function requestAssistantResponse(text) {
+        async function requestAssistantResponse(text) {
             if (!text) return;
             latestPrompt = text;
             const requestId = ++latestRequestId;
-            const statusText = statusLabels[(requestId - 1) % statusLabels.length];
             aiState = 'thinking';
-            const pendingAssistant = createPendingAssistantMessage();
-            const thinkingRow = appendThinkingRow('Processing', pendingAssistant?.message);
-            
-            const rIcon = pendingAssistant?.reasoning?.querySelector('.ai-chatbot-reasoning-icon');
-            const tText = thinkingRow?.querySelector('.chatbot-thinking-text');
-            startOpenChatbotThinkingAnimation([rIcon], [tText]);
-            
             setLauncherState('thinking');
 
-            window.setTimeout(() => {
-                if (requestId !== latestRequestId) return;
-                const shouldFail = text.toLowerCase().includes('/fail');
-                stopOpenChatbotThinkingAnimation();
-                if (thinkingRow) thinkingRow.remove();
-                completeReasoning(pendingAssistant?.reasoning);
+            const message = document.createElement('div');
+            message.className = 'ai-chatbot-message assistant';
+            
+            let reasoning = null;
+            let reasoningContent = null;
+            if (aiChatMode === 'think') {
+                reasoning = createReasoningBlock();
+                reasoningContent = reasoning.querySelector('.ai-chatbot-reasoning-content');
+                reasoningContent.innerHTML = ''; // clear default
+                message.appendChild(reasoning);
+            }
+            
+            const responseContent = document.createElement('div');
+            responseContent.className = 'ai-chatbot-message-content';
+            message.appendChild(responseContent);
 
-                if (shouldFail) {
-                    aiState = 'failed';
-                    const content = document.createElement('div');
-                    content.className = 'ai-chatbot-message-content';
-                    renderMarkdown(content, '**Request failed.** Please try again.');
-                    pendingAssistant?.message.appendChild(content);
-                    setLauncherState('failed');
-                    return;
+            aiChatbotBody.appendChild(message);
+            const thinkingRow = appendThinkingRow('Processing', message);
+            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+
+            const rIcon = reasoning?.querySelector('.ai-chatbot-reasoning-icon');
+            const tText = thinkingRow?.querySelector('.chatbot-thinking-text');
+            startOpenChatbotThinkingAnimation([rIcon], [tText]);
+
+            let fullRawText = '';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: text, mode: aiChatMode })
+                });
+
+                if (!response.ok) {
+                    throw new Error('API Error: ' + response.statusText);
                 }
 
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                let currentThinkText = '';
+                let currentMainText = '';
+
+                while (true) {
+                    if (requestId !== latestRequestId) break;
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr === '[DONE]') continue;
+                            try {
+                                const data = JSON.parse(dataStr);
+                                if (data.error) throw new Error(data.error);
+                                
+                                if (data.thought) {
+                                    currentThinkText += data.thought;
+                                } else if (data.text) {
+                                    currentMainText += data.text;
+                                }
+
+                                // Update UI
+                                if (aiChatMode === 'think' && reasoningContent) {
+                                    reasoningContent.innerHTML = '';
+                                    renderMarkdown(reasoningContent, currentThinkText.trim() || 'Thinking...');
+                                }
+
+                                responseContent.innerHTML = '';
+                                renderMarkdown(responseContent, currentMainText.trim());
+                                aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+
+                            } catch (e) {
+                                console.error('Parse error or backend error:', e);
+                            }
+                        }
+                    }
+                }
+
+                if (requestId !== latestRequestId) return;
+                
+                stopOpenChatbotThinkingAnimation();
+                if (thinkingRow) thinkingRow.remove();
+                if (reasoning) completeReasoning(reasoning);
+
                 aiState = 'success';
-                const responseText = `Mock response: I received **"${text}"** and can help analyze it once AI integration is connected.\n\n- Chat history stays preserved\n- Docking remains available\n- Real AI integration can be connected later`;
-                const content = document.createElement('div');
-                content.className = 'ai-chatbot-message-content';
-                renderMarkdown(content, responseText);
-                pendingAssistant?.message.appendChild(content);
-                pendingAssistant?.message.appendChild(createMessageActions(responseText, text));
+                
+                message.appendChild(createMessageActions(currentMainText.trim(), text));
                 aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
                 setLauncherState('success');
-            }, 900);
+
+            } catch (err) {
+                if (requestId !== latestRequestId) return;
+                console.error(err);
+                stopOpenChatbotThinkingAnimation();
+                if (thinkingRow) thinkingRow.remove();
+                if (reasoning) completeReasoning(reasoning);
+
+                aiState = 'failed';
+                responseContent.innerHTML = '';
+                renderMarkdown(responseContent, '**Request failed.** ' + err.message);
+                setLauncherState('failed');
+            }
         }
 
         function openChatbot() {
@@ -604,6 +679,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (aiChatbotForm && aiChatbotInput && aiChatbotBody) {
+            if (aiChatbotModeToggle) {
+                aiChatbotModeToggle.addEventListener('click', () => {
+                    aiChatMode = aiChatMode === 'think' ? 'instant' : 'think';
+                    aiChatbotModeToggle.classList.toggle('instant-mode', aiChatMode === 'instant');
+                    
+                    const modeIcon = document.getElementById('aiChatbotModeIcon');
+                    if (aiChatMode === 'instant') {
+                        if (modeIcon) modeIcon.src = '/static/icons/instantWhite.svg';
+                        aiChatbotModeToggle.title = 'Switch to Think Mode';
+                    } else {
+                        if (modeIcon) modeIcon.src = '/static/icons/thinkBlack.svg';
+                        aiChatbotModeToggle.title = 'Switch to Instant Mode';
+                    }
+                });
+            }
+
             aiChatbotForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const text = aiChatbotInput.value.trim();

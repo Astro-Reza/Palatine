@@ -1,13 +1,25 @@
 import os
 from dotenv import load_dotenv
 from google import genai
+import sys
 
-# Load environment variables from .env file (located in the project root)
-env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-load_dotenv(env_path)
+# 1. Setup
+env_path = None
+for path in ['.env', '../.env', '../../.env']:
+    if os.path.exists(path):
+        env_path = path
+        break
 
-# Initialize the Client
+if env_path:
+    load_dotenv(env_path)
+    print(f"Loaded .env from: {os.path.abspath(env_path)}")
+else:
+    print("Warning: .env file not found!")
+
 api_key = os.getenv("GEMMA_API_KEY")
+if not api_key:
+    raise ValueError("GEMMA_API_KEY not found in environment variables. Check your .env file.")
+
 client = genai.Client(api_key=api_key)
 
 # Generate content using the client.models accessor

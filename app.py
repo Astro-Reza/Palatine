@@ -289,5 +289,56 @@ def project_delete(filename):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ─── Chatbot API ───
+from dotenv import load_dotenv
+from google import genai
+from flask import Response, stream_with_context
+
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(env_path)
+
+api_key = os.getenv("GEMMA_API_KEY")
+genai_client = genai.Client(api_key=api_key) if api_key else None
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    if not genai_client:
+        return jsonify({"error": "GEMMA_API_KEY is not configured in .env"}), 500
+        
+    data = request.json or {}
+    prompt = data.get('prompt', '')
+    mode = data.get('mode', 'think')
+    
+    if not prompt:
+        return jsonify({"error": "Prompt is required"}), 400
+
+    def generate():
+        try:
+            response = genai_client.models.generate_content_stream(
+                model='gemma-4-26b-a4b-it',
+                contents=prompt
+            )
+            for chunk in response:
+                if getattr(chunk, 'candidates', None) and chunk.candidates:
+                    candidate = chunk.candidates[0]
+                    if getattr(candidate, 'content', None) and getattr(candidate.content, 'parts', None):
+                        for part in candidate.content.parts:
+                            if not getattr(part, 'text', None):
+                                continue
+                                
+                            payload = {}
+                            # Check if the SDK marked this part as a thought
+                            if getattr(part, 'thought', False):
+                                payload['thought'] = part.text
+                            else:
+                                payload['text'] = part.text
+                                
+                            yield f"data: {json.dumps(payload)}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

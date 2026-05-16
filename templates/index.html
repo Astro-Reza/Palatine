@@ -27,7 +27,8 @@
         </div>
 
         <div class="project-name-container">
-            <input type="text" id="projectNameInput" class="project-name-input" value="Untitled Project" title="Click to rename project">
+            <input type="text" id="projectNameInput" class="project-name-input" value="Untitled Project"
+                title="Click to rename project">
         </div>
 
         <!-- Logo Dropdown Menu -->
@@ -74,10 +75,12 @@
 
         <div class="nav-menus">
             <div class="nav-item active" onclick="window.location.href='/'" title="Space System">Space System</div>
-            <div class="nav-item inactive" onclick="window.location.href='/ground-system'" title="Ground System">Ground System</div>
+            <div class="nav-item inactive" onclick="window.location.href='/ground-system'" title="Ground System">Ground
+                System</div>
             <div class="nav-item inactive" title="Calculate">Calculate</div>
             <div class="nav-item inactive" title="Simulations">Simulations</div>
-            <div class="nav-item inactive" onclick="if(window.SessionManager) window.SessionManager.showOpenDialog()" title="Projects">Projects</div>
+            <div class="nav-item inactive" onclick="if(window.SessionManager) window.SessionManager.showOpenDialog()"
+                title="Projects">Projects</div>
         </div>
     </nav>
 
@@ -180,7 +183,8 @@
             <div class="throw-button-container">
                 <div class="toolbar">
                     <div class="toggle-group">
-                        <button class="ai-chatbot-toolbar-btn" id="aiChatbotReopen" type="button" title="Open Arcturus" aria-label="Open Arcturus">
+                        <button class="ai-chatbot-toolbar-btn" id="aiChatbotReopen" type="button" title="Open Arcturus"
+                            aria-label="Open Arcturus">
                             <img src="/static/icons/palatine-chatbot-logo.svg" alt="">
                             <span class="ai-chatbot-launcher-status" aria-hidden="true"></span>
                         </button>
@@ -225,7 +229,8 @@
                 <div class="ai-chatbot-body" id="aiChatbotMessages">
                     <div class="ai-chatbot-message assistant">
                         <div class="ai-chatbot-message-content">
-                            <p>Telemetry sync is active. I can help review constellation changes and orbital parameters.</p>
+                            <p>Telemetry sync is active. I can help review constellation changes and orbital parameters.
+                            </p>
                         </div>
                     </div>
                     <div class="ai-chatbot-message assistant">
@@ -235,10 +240,14 @@
                     </div>
                 </div>
                 <form class="ai-chatbot-input-row" id="aiChatbotForm">
+                    <button class="ai-chatbot-mode-toggle" id="aiChatbotModeToggle" type="button" title="Switch to Instant Mode">
+                        <img id="aiChatbotModeIcon" src="/static/icons/thinkBlack.svg" alt="">
+                    </button>
                     <input type="text" id="aiChatbotInput" placeholder="Ask Arcturus..." autocomplete="off">
                     <button type="submit" title="Send">Send</button>
                 </form>
-                <button class="ai-chatbot-resize-handle" id="aiChatbotResizeHandle" type="button" aria-label="Resize Arcturus"></button>
+                <button class="ai-chatbot-resize-handle" id="aiChatbotResizeHandle" type="button"
+                    aria-label="Resize Arcturus"></button>
             </section>
 
         </div>

@@ -1586,6 +1586,32 @@ select.form-input {
     margin-right: 7px;
 }
 
+.ai-chatbot-mode-toggle {
+    width: 27px;
+    height: 27px;
+    background: #cdfa71;
+    border: none;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: none;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.ai-chatbot-mode-toggle.instant-mode {
+    background: #1a1a1a;
+}
+
+.ai-chatbot-mode-toggle img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    pointer-events: none;
+}
+
 .ai-chatbot-input-row input {
     min-width: 0;
     flex: 1;
