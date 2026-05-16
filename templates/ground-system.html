@@ -319,36 +319,41 @@
                         </div>
                     </div>
 
-                    <div class="divider"></div>
+                </div>
 
-                    <!-- ── Previous Run ── -->
-                    <div class="section">
-                        <div class="prev-run-header">Previous Run</div>
-                        <div class="run-card">
-                            <div class="run-card-title">RUN_1_4/18/2026</div>
-                            <div class="run-stat-row">
-                                <span class="run-stat-label">Best Case Power</span>
-                                <span class="run-stat-value">−94.6 dBW</span>
-                            </div>
-                            <div class="run-stat-row">
-                                <span class="run-stat-label">Worst Case Power</span>
-                                <span class="run-stat-value">−105.0 dBW</span>
-                            </div>
-                            <div class="run-stat-row">
-                                <span class="run-stat-label">Expected Margin</span>
-                                <span class="run-stat-value">7.03 dB</span>
-                            </div>
-                            <div class="run-stat-row">
-                                <span class="run-stat-label">Mean Contact Duration</span>
-                                <span class="run-stat-value">648 s</span>
-                            </div>
-                            <div class="run-stat-row">
-                                <span class="run-stat-label">Samples Used</span>
-                                <span class="run-stat-value">10,000</span>
+                <!-- Vertical resizer between settings and previous run -->
+                <div class="isl-v-resizer" id="gsVResizer"></div>
+
+                <!-- Previous Run Detail Settings Panel (always visible, bottom half) -->
+                <div class="isl-settings-panel" id="prevRunPanel">
+                    <div class="isl-settings-content" style="opacity: 1; overflow-y: auto;">
+                        <div class="section" style="border-bottom: none; margin-bottom: 0; padding: 10px 0;">
+                            <div class="prev-run-header">Previous Run</div>
+                            <div class="run-card">
+                                <div class="run-card-title">RUN_1_4/18/2026</div>
+                                <div class="run-stat-row">
+                                    <span class="run-stat-label">Best Case Power</span>
+                                    <span class="run-stat-value">−94.6 dBW</span>
+                                </div>
+                                <div class="run-stat-row">
+                                    <span class="run-stat-label">Worst Case Power</span>
+                                    <span class="run-stat-value">−105.0 dBW</span>
+                                </div>
+                                <div class="run-stat-row">
+                                    <span class="run-stat-label">Expected Margin</span>
+                                    <span class="run-stat-value">7.03 dB</span>
+                                </div>
+                                <div class="run-stat-row">
+                                    <span class="run-stat-label">Mean Contact Duration</span>
+                                    <span class="run-stat-value">648 s</span>
+                                </div>
+                                <div class="run-stat-row">
+                                    <span class="run-stat-label">Samples Used</span>
+                                    <span class="run-stat-value">10,000</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -749,6 +754,21 @@
         </div><!-- /modal -->
     </div><!-- /overlay -->
 
+    <!-- Open Project Modal -->
+    <div id="openProjectModal" class="project-modal-overlay" style="display: none;">
+        <div class="project-modal">
+            <div class="project-modal-header">
+                <span class="project-modal-title">Open Project</span>
+                <button class="project-modal-close" id="closeOpenModal">&times;</button>
+            </div>
+            <div class="project-modal-body">
+                <div class="project-list" id="projectList">
+                    <div class="project-list-loading">Loading projects...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/orbit_v2.js"></script>
     <script>
         function updateAnalysisSettings() {
@@ -780,6 +800,24 @@
                 if (e.key === 'Escape') {
                     logoDropdown.classList.remove('open');
                 }
+            });
+
+            // Menu item click handlers wired to SessionManager
+            document.querySelectorAll('.logo-menu-item').forEach(item => {
+                item.addEventListener('click', function () {
+                    const action = this.getAttribute('data-action');
+                    logoDropdown.classList.remove('open');
+
+                    if (window.SessionManager) {
+                        switch (action) {
+                            case 'new-project': SessionManager.newProject(); break;
+                            case 'open-project': SessionManager.showOpenDialog(); break;
+                            case 'save-project': SessionManager.saveProject(); break;
+                            case 'export': SessionManager.exportProject(); break;
+                            default: console.log('Menu action (no handler):', action);
+                        }
+                    }
+                });
             });
         }
 
@@ -860,6 +898,50 @@
                 document.body.style.userSelect = 'auto';
             }
         });
+
+        /* -----------------------------------------
+           Vertical Resizer Logic (Left Panel)
+           ----------------------------------------- */
+        const vResizer = document.getElementById('gsVResizer');
+        const mainContainerLeft = document.getElementById('mainSectionsContainerLeft');
+        const sectionsWrapperLeft = mainContainerLeft ? mainContainerLeft.querySelector('.sections-wrapper') : null;
+        const prevRunPanel = document.getElementById('prevRunPanel');
+
+        if (vResizer && mainContainerLeft && sectionsWrapperLeft && prevRunPanel) {
+            let isResizingV = false;
+
+            vResizer.addEventListener('mousedown', (e) => {
+                isResizingV = true;
+                vResizer.classList.add('active');
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizingV) return;
+                const containerRect = mainContainerLeft.getBoundingClientRect();
+                const offsetY = e.clientY - containerRect.top;
+                const totalHeight = containerRect.height;
+
+                const minTop = 100;
+                const minBottom = 80;
+                const clampedY = Math.max(minTop, Math.min(totalHeight - minBottom, offsetY));
+
+                sectionsWrapperLeft.style.flex = 'none';
+                sectionsWrapperLeft.style.height = clampedY + 'px';
+                prevRunPanel.style.flex = '1';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizingV) {
+                    isResizingV = false;
+                    vResizer.classList.remove('active');
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto';
+                }
+            });
+        }
     </script>
     <script src="/static/js/session.js"></script>
     <script src="/static/js/ground-settings.js"></script>
