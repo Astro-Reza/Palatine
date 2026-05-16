@@ -1,8 +1,14 @@
+import os
+from dotenv import load_dotenv
 from google import genai
 
+# Load environment variables from .env file (located in the project root)
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(env_path)
+
 # Initialize the Client
-# If you set an environment variable GEMINI_API_KEY, you can just use genai.Client()
-client = genai.Client(api_key="AIzaSyAazrqVx-UmY5QhJlANrLekvKYSuo6R8fM")
+api_key = os.getenv("GEMMA_API_KEY")
+client = genai.Client(api_key=api_key)
 
 # Generate content using the client.models accessor
 response = client.models.generate_content(
