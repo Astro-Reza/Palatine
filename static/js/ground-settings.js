@@ -308,6 +308,10 @@
         const allStations = [];
         if (hwContainer) {
             hwContainer.querySelectorAll('.section').forEach(section => {
+                const eyeBtn = section.querySelector('.eye-toggle-btn');
+                if (eyeBtn && eyeBtn.classList.contains('slashed')) {
+                    return; // Skip hidden hardware
+                }
                 if (section.dataset.hw) {
                     try {
                         const hw = JSON.parse(section.dataset.hw);
@@ -334,12 +338,15 @@
         const section = document.createElement('div');
         section.className = 'section';
         section.dataset.hw = JSON.stringify(hw);
+        const isSlashed = hw.visible === false ? ' slashed' : '';
+        const isChecked = hw.checked !== false ? 'checked' : '';
         section.innerHTML = `
             <div class="section-header">
                 <div class="collapse-arrow"></div>
+                <input type="checkbox" class="hardware-checkbox" ${isChecked} style="cursor: pointer; width: 16px; height: 16px; margin-right: 8px;" title="Check to simulate">
                 <h3>${hw.name}</h3>
                 <div class="header-icons">
-                    <div class="eye-toggle-btn">
+                    <div class="eye-toggle-btn${isSlashed}">
                         <img src="/static/icon/toogleView.svg" alt="Toggle View">
                     </div>
                     <img src="/static/icon/more1.svg" class="detailed-settings-btn" alt="Settings" title="Detailed Settings">
@@ -372,16 +379,30 @@
             section.classList.toggle('collapsed');
         });
 
+        // Checkbox logic
+        const checkbox = section.querySelector('.hardware-checkbox');
+        checkbox.addEventListener('change', () => {
+            const currentHw = JSON.parse(section.dataset.hw);
+            currentHw.checked = checkbox.checked;
+            section.dataset.hw = JSON.stringify(currentHw);
+            triggerAutoSave();
+        });
+        checkbox.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
         // Eye toggle
         const eyeBtn = section.querySelector('.eye-toggle-btn');
         eyeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             eyeBtn.classList.toggle('slashed');
+            updateGroundStationsRender();
+            triggerAutoSave();
         });
 
         // Selection logic
         section.addEventListener('click', (e) => {
-            if (e.target.closest('.header-icons') || e.target.classList.contains('collapse-arrow')) return;
+            if (e.target.closest('.header-icons') || e.target.classList.contains('collapse-arrow') || e.target.classList.contains('hardware-checkbox')) return;
 
             if (!e.ctrlKey && !e.metaKey) {
                 hwContainer.querySelectorAll('.section').forEach(el => {

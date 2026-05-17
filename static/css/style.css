@@ -4199,3 +4199,15 @@ select.form-input {
     border: 1px dashed #242424;
     border-radius: 8px;
 }
+
+/* Premium Checklist Checkboxes */
+.hardware-checkbox,
+.constellation-checkbox {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--btn-green);
+    position: relative;
+    border-radius: 4px;
+    outline: none;
+}

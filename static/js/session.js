@@ -129,7 +129,16 @@
         sections.forEach(section => {
             if (section.dataset.hw) {
                 try {
-                    stations.push(JSON.parse(section.dataset.hw));
+                    const hw = JSON.parse(section.dataset.hw);
+                    const eyeBtn = section.querySelector('.eye-toggle-btn');
+                    if (eyeBtn) {
+                        hw.visible = !eyeBtn.classList.contains('slashed');
+                    }
+                    const checkbox = section.querySelector('.hardware-checkbox');
+                    if (checkbox) {
+                        hw.checked = checkbox.checked;
+                    }
+                    stations.push(hw);
                 } catch (e) {
                     console.error("Error parsing ground hardware dataset", e);
                 }
@@ -171,6 +180,23 @@
         } else if (isGroundSystem) {
             state.ground_stations = collectGroundStations();
             if (wrapper) state.ground_hierarchy = collectHierarchy(wrapper);
+            
+            // Sync constellation checkboxes state
+            const constCards = document.querySelectorAll('#constellationsPanel .run-card');
+            constCards.forEach(card => {
+                try {
+                    const cData = JSON.parse(card.dataset.constellation);
+                    const checkbox = card.querySelector('.constellation-checkbox');
+                    if (checkbox && state.constellations) {
+                        const matched = state.constellations.find(c => c.id === cData.id || c.name === cData.name);
+                        if (matched) {
+                            matched.checked = checkbox.checked;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error collecting constellation checkbox state", e);
+                }
+            });
         }
 
         return state;
@@ -328,13 +354,14 @@
                     else if (c.orbit?.apogee > 2000) orbitType = 'MEO';
                     
                     const name = c.name || 'Unnamed Constellation';
+                    const isChecked = c.checked !== false ? 'checked' : '';
                     
                     const card = document.createElement('div');
                     card.className = 'run-card';
                     card.innerHTML = `
                         <div class="run-card-title" style="display: flex; align-items: center; justify-content: space-between;">
                             <span>${name}</span>
-                            <input type="checkbox" class="constellation-checkbox" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent-green);">
+                            <input type="checkbox" class="constellation-checkbox" ${isChecked} style="cursor: pointer; width: 16px; height: 16px;" title="Check to simulate">
                         </div>
                         <div class="run-stat-row">
                             <span class="run-stat-label">Satellites deployed</span>
@@ -347,6 +374,13 @@
                     `;
                     // Store the raw constellation data on the DOM element for the simulation engine
                     card.dataset.constellation = JSON.stringify(c);
+                    
+                    // Trigger autosave when constellation checkbox is toggled
+                    const checkbox = card.querySelector('.constellation-checkbox');
+                    checkbox.addEventListener('change', () => {
+                        if (window.SessionManager) window.SessionManager.autoSave();
+                    });
+
                     constPanelWrapper.appendChild(card);
                 });
             }
