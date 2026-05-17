@@ -1576,14 +1576,35 @@ select.form-input {
 }
 
 .ai-chatbot-input-row {
-    height: 42px;
+    min-height: 84px;
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 7px;
     padding: 0 16px 14px 17px;
     box-sizing: border-box;
     margin-right: 7px;
+}
+
+.ai-chatbot-prompt-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(26, 26, 26, 0.96);
+    box-sizing: border-box;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ai-chatbot-prompt-group:focus-within {
+    border-color: rgba(205, 250, 113, 0.32);
+    box-shadow: 0 0 0 1px rgba(205, 250, 113, 0.08);
+}
+
+.ai-chatbot-prompt-addon {
+    display: flex;
+    align-items: center;
+    gap: 7px;
 }
 
 .ai-chatbot-mode-toggle {
@@ -1612,22 +1633,42 @@ select.form-input {
     pointer-events: none;
 }
 
-.ai-chatbot-input-row input {
-    min-width: 0;
-    flex: 1;
-    height: 27px;
+.ai-chatbot-input-row .ai-chatbot-prompt-input {
+    width: 100%;
+    min-height: 44px;
+    max-height: 140px;
     border: 0;
-    border-radius: 6px;
-    background: #1a1a1a;
+    border-radius: 0;
+    background: transparent;
     color: var(--text-main);
-    padding: 0 10px;
+    padding: 2px 2px 0;
     font-family: var(--font-family);
     font-size: 12px;
+    line-height: 18px;
     outline: none;
+    resize: none;
+    overflow-y: hidden;
+    box-sizing: border-box;
+    transition: height 0.16s ease;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
 }
 
-.ai-chatbot-input-row input::placeholder {
+.ai-chatbot-input-row .ai-chatbot-prompt-input::placeholder {
     color: rgba(255, 255, 255, 0.4);
+}
+
+.ai-chatbot-input-row .ai-chatbot-prompt-input::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ai-chatbot-input-row .ai-chatbot-prompt-input::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ai-chatbot-input-row .ai-chatbot-prompt-input::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
 }
 
 .ai-chatbot-input-row button {
@@ -1641,6 +1682,29 @@ select.form-input {
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
+}
+
+.ai-chatbot-input-row .ai-chatbot-send-btn {
+    min-width: 44px;
+    margin-left: auto;
+}
+
+.ai-chatbot-input-row .ai-chatbot-send-btn.is-processing {
+    animation: arcturus-processing-ring 1.2s ease-in-out infinite;
+}
+
+@keyframes arcturus-processing-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(91, 227, 205, 0.75);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(91, 227, 205, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(91, 227, 205, 0);
+    }
 }
 
 .ai-chatbot.minimized {

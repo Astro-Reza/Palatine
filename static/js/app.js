@@ -104,18 +104,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiChatbotForm = document.getElementById('aiChatbotForm');
     const aiChatbotInput = document.getElementById('aiChatbotInput');
     const aiChatbotBody = aiChatbot ? aiChatbot.querySelector('.ai-chatbot-body') : null;
+    const aiChatbotSendBtn = aiChatbotForm ? aiChatbotForm.querySelector('.ai-chatbot-send-btn') : null;
     const floatingLayer = document.getElementById('floating-layer');
     const middleArea = document.querySelector('.middle-area');
     const leftPanel = document.getElementById('sidePanelRight');
     const rightPanel = document.getElementById('sidePanelLeft');
 
-    if (aiChatbot && aiChatbotHeader && middleArea && floatingLayer && leftPanel && rightPanel) {
-        let chatMode = 'floating';
+    if (aiChatbot && aiChatbotHeader && aiChatbotForm && aiChatbotInput && aiChatbotBody) {
+        const supportsFloatingChat = Boolean(middleArea && floatingLayer && leftPanel && rightPanel);
+        let chatMode = supportsFloatingChat ? 'floating' : 'embedded';
         let dragState = null;
         let resizeState = null;
         let resizeFrame = null;
         let latestRequestId = 0;
         let aiState = 'idle';
+        let isProcessing = false;
+        let activeRequest = null;
         let thinkingAnimationTimer = null;
         let thinkingFrameIndex = 0;
         let latestPrompt = '';
@@ -132,11 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         function clearSnapPreview() {
+            if (!supportsFloatingChat) return;
             leftPanel.classList.remove('chatbot-snap-target');
             rightPanel.classList.remove('chatbot-snap-target');
         }
 
         function setFloatingPosition(left, top) {
+            if (!supportsFloatingChat) return;
             const bounds = middleArea.getBoundingClientRect();
             const maxLeft = Math.max(0, bounds.width - aiChatbot.offsetWidth - 8);
             const maxTop = Math.max(0, bounds.height - aiChatbot.offsetHeight - 8);
@@ -147,11 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function setBottomLeftFloatingPosition() {
+            if (!supportsFloatingChat) return;
             const bounds = middleArea.getBoundingClientRect();
             setFloatingPosition(16, Math.max(16, bounds.height - aiChatbot.offsetHeight - 16));
         }
 
         function setChatMode(nextMode) {
+            if (!supportsFloatingChat) return;
             chatMode = nextMode;
             aiChatbot.classList.toggle('docked', chatMode !== 'floating');
 
@@ -167,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function setFloatingSize(width, height, left, top) {
+            if (!supportsFloatingChat) return;
             const bounds = middleArea.getBoundingClientRect();
             const minWidth = 280;
             const minHeight = 320;
@@ -432,12 +441,74 @@ document.addEventListener('DOMContentLoaded', () => {
             return row;
         }
 
+        function setProcessingState(processing) {
+            isProcessing = processing;
+            if (aiChatbotInput) aiChatbotInput.disabled = processing;
+            if (!aiChatbotSendBtn) return;
+            aiChatbotSendBtn.classList.toggle('is-processing', processing);
+            aiChatbotSendBtn.title = processing ? 'Stop generating' : 'Send';
+            aiChatbotSendBtn.setAttribute('aria-label', processing ? 'Stop generating' : 'Send');
+            aiChatbotSendBtn.textContent = processing ? '■' : 'Send';
+        }
+
+        function restoreInputAfterResponse() {
+            setProcessingState(false);
+            if (aiChatbotInput) aiChatbotInput.focus();
+            if (aiChatbotBody) aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+        }
+
+        function resizeChatbotInput() {
+            if (!aiChatbotInput || aiChatbotInput.tagName !== 'TEXTAREA') return;
+            aiChatbotInput.style.height = 'auto';
+            const inputStyles = window.getComputedStyle(aiChatbotInput);
+            const minHeight = Number.parseFloat(inputStyles.minHeight);
+            const maxHeight = Number.parseFloat(inputStyles.maxHeight);
+            const unclampedHeight = aiChatbotInput.scrollHeight;
+            const nextHeight = Math.min(
+                Number.isFinite(maxHeight) ? maxHeight : unclampedHeight,
+                Math.max(Number.isFinite(minHeight) ? minHeight : 0, unclampedHeight)
+            );
+            aiChatbotInput.style.height = `${nextHeight}px`;
+            aiChatbotInput.style.overflowY = unclampedHeight > nextHeight ? 'auto' : 'hidden';
+        }
+
+        function stopReasoning(reasoning) {
+            if (!reasoning) return;
+            const label = reasoning.querySelector('.ai-chatbot-reasoning-label');
+            if (label) {
+                label.classList.remove('is-thinking');
+                label.textContent = 'Stopped';
+            }
+            window.setTimeout(() => setReasoningOpen(reasoning, false), 1000);
+        }
+
+        function stopActiveResponse() {
+            if (!isProcessing || !activeRequest) return;
+
+            const { controller, reasoning, responseContent, thinkingRow } = activeRequest;
+            latestRequestId += 1;
+            controller.abort();
+            stopOpenChatbotThinkingAnimation();
+            if (thinkingRow) thinkingRow.remove();
+            stopReasoning(reasoning);
+            if (responseContent) {
+                responseContent.innerHTML = '';
+                renderMarkdown(responseContent, 'Generation stopped.');
+            }
+            aiState = 'idle';
+            activeRequest = null;
+            restoreInputAfterResponse();
+            clearLauncherState();
+        }
+
         async function requestAssistantResponse(text) {
-            if (!text) return;
+            if (!text || isProcessing) return;
             latestPrompt = text;
             const requestId = ++latestRequestId;
+            const controller = new AbortController();
             aiState = 'thinking';
             setLauncherState('thinking');
+            setProcessingState(true);
 
             const message = document.createElement('div');
             message.className = 'ai-chatbot-message assistant';
@@ -462,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rIcon = reasoning?.querySelector('.ai-chatbot-reasoning-icon');
             const tText = thinkingRow?.querySelector('.chatbot-thinking-text');
             startOpenChatbotThinkingAnimation([rIcon], [tText]);
+            activeRequest = { requestId, controller, message, reasoning, responseContent, thinkingRow };
 
             let fullRawText = '';
 
@@ -469,7 +541,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, mode: aiChatMode })
+                    body: JSON.stringify({ prompt: text, mode: aiChatMode }),
+                    signal: controller.signal
                 });
 
                 if (!response.ok) {
@@ -534,6 +607,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 message.appendChild(createMessageActions(currentMainText.trim(), text));
                 aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
                 setLauncherState('success');
+                activeRequest = null;
+                restoreInputAfterResponse();
 
             } catch (err) {
                 if (requestId !== latestRequestId) return;
@@ -544,8 +619,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 aiState = 'failed';
                 responseContent.innerHTML = '';
-                renderMarkdown(responseContent, '**Request failed.** ' + err.message);
+                renderMarkdown(responseContent, '**Sorry — I could not complete that response.** Please try again.');
                 setLauncherState('failed');
+                activeRequest = null;
+                restoreInputAfterResponse();
             }
         }
 
@@ -569,75 +646,77 @@ document.addEventListener('DOMContentLoaded', () => {
             setLauncherState(aiState);
         }
 
-        aiChatbotHeader.addEventListener('mousedown', (e) => {
-            if (e.target.closest('button')) return;
-            const rect = aiChatbot.getBoundingClientRect();
-            if (chatMode !== 'floating') {
-                setChatMode('floating');
-                const bounds = middleArea.getBoundingClientRect();
-                setFloatingPosition(rect.left - bounds.left, rect.top - bounds.top);
-            }
-            dragState = {
-                offsetX: e.clientX - rect.left,
-                offsetY: e.clientY - rect.top
-            };
-            document.body.style.userSelect = 'none';
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (resizeState) {
-                e.preventDefault();
-                const deltaX = e.clientX - resizeState.startX;
-                const deltaY = e.clientY - resizeState.startY;
-                const nextWidth = resizeState.startWidth + deltaX;
-                const nextHeight = resizeState.startHeight - deltaY;
-                const constrainedHeight = Math.min(
-                    Math.max(nextHeight, 320),
-                    Math.min(window.innerHeight * 0.8, resizeState.startBottom - 16)
-                );
-                const nextTop = resizeState.startBottom - constrainedHeight;
-                resizeState.nextWidth = nextWidth;
-                resizeState.nextHeight = constrainedHeight;
-                resizeState.nextTop = nextTop;
-                if (!resizeFrame) resizeFrame = window.requestAnimationFrame(applyResizeFrame);
-                return;
-            }
-            if (!dragState) return;
-            const bounds = middleArea.getBoundingClientRect();
-            setFloatingPosition(e.clientX - bounds.left - dragState.offsetX, e.clientY - bounds.top - dragState.offsetY);
-            const distanceToLeft = e.clientX;
-            const distanceToRight = window.innerWidth - e.clientX;
-            clearSnapPreview();
-            if (distanceToLeft <= SNAP_THRESHOLD) {
-                leftPanel.classList.add('chatbot-snap-target');
-            } else if (distanceToRight <= SNAP_THRESHOLD) {
-                rightPanel.classList.add('chatbot-snap-target');
-            }
-        });
-
-        document.addEventListener('mouseup', (e) => {
-            if (resizeState) {
-                if (resizeFrame) {
-                    window.cancelAnimationFrame(resizeFrame);
-                    resizeFrame = null;
+        if (supportsFloatingChat) {
+            aiChatbotHeader.addEventListener('mousedown', (e) => {
+                if (e.target.closest('button')) return;
+                const rect = aiChatbot.getBoundingClientRect();
+                if (chatMode !== 'floating') {
+                    setChatMode('floating');
+                    const bounds = middleArea.getBoundingClientRect();
+                    setFloatingPosition(rect.left - bounds.left, rect.top - bounds.top);
                 }
-                resizeState = null;
-                aiChatbot.classList.remove('is-resizing');
-                document.body.style.cursor = 'default';
-                document.body.style.userSelect = 'auto';
-                return;
-            }
-            if (!dragState) return;
-            dragState = null;
-            document.body.style.userSelect = 'auto';
-            if (e.clientX <= SNAP_THRESHOLD) {
-                setChatMode('dock-left');
-            } else if (window.innerWidth - e.clientX <= SNAP_THRESHOLD) {
-                setChatMode('dock-right');
-            } else {
+                dragState = {
+                    offsetX: e.clientX - rect.left,
+                    offsetY: e.clientY - rect.top
+                };
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (resizeState) {
+                    e.preventDefault();
+                    const deltaX = e.clientX - resizeState.startX;
+                    const deltaY = e.clientY - resizeState.startY;
+                    const nextWidth = resizeState.startWidth + deltaX;
+                    const nextHeight = resizeState.startHeight - deltaY;
+                    const constrainedHeight = Math.min(
+                        Math.max(nextHeight, 320),
+                        Math.min(window.innerHeight * 0.8, resizeState.startBottom - 16)
+                    );
+                    const nextTop = resizeState.startBottom - constrainedHeight;
+                    resizeState.nextWidth = nextWidth;
+                    resizeState.nextHeight = constrainedHeight;
+                    resizeState.nextTop = nextTop;
+                    if (!resizeFrame) resizeFrame = window.requestAnimationFrame(applyResizeFrame);
+                    return;
+                }
+                if (!dragState) return;
+                const bounds = middleArea.getBoundingClientRect();
+                setFloatingPosition(e.clientX - bounds.left - dragState.offsetX, e.clientY - bounds.top - dragState.offsetY);
+                const distanceToLeft = e.clientX;
+                const distanceToRight = window.innerWidth - e.clientX;
                 clearSnapPreview();
-            }
-        });
+                if (distanceToLeft <= SNAP_THRESHOLD) {
+                    leftPanel.classList.add('chatbot-snap-target');
+                } else if (distanceToRight <= SNAP_THRESHOLD) {
+                    rightPanel.classList.add('chatbot-snap-target');
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (resizeState) {
+                    if (resizeFrame) {
+                        window.cancelAnimationFrame(resizeFrame);
+                        resizeFrame = null;
+                    }
+                    resizeState = null;
+                    aiChatbot.classList.remove('is-resizing');
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto';
+                    return;
+                }
+                if (!dragState) return;
+                dragState = null;
+                document.body.style.userSelect = 'auto';
+                if (e.clientX <= SNAP_THRESHOLD) {
+                    setChatMode('dock-left');
+                } else if (window.innerWidth - e.clientX <= SNAP_THRESHOLD) {
+                    setChatMode('dock-right');
+                } else {
+                    clearSnapPreview();
+                }
+            });
+        }
 
         if (aiCloseBtn) {
             aiCloseBtn.addEventListener('click', closeChatbot);
@@ -653,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
             aiMinimizeBtn.addEventListener('click', minimizeChatbot);
         }
 
-        if (aiChatbotResizeHandle) {
+        if (supportsFloatingChat && aiChatbotResizeHandle) {
             aiChatbotResizeHandle.addEventListener('mousedown', (e) => {
                 if (chatMode !== 'floating') return;
                 e.preventDefault();
@@ -697,13 +776,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
             aiChatbotForm.addEventListener('submit', (e) => {
                 e.preventDefault();
+                if (isProcessing) {
+                    stopActiveResponse();
+                    return;
+                }
                 const text = aiChatbotInput.value.trim();
                 if (!text) return;
 
                 appendMessage('user', text);
                 aiChatbotInput.value = '';
+                resizeChatbotInput();
                 requestAssistantResponse(text);
             });
+
+            if (aiChatbotInput.tagName === 'TEXTAREA') {
+                aiChatbotInput.addEventListener('input', resizeChatbotInput);
+                aiChatbotInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        aiChatbotForm.requestSubmit();
+                    }
+                });
+                resizeChatbotInput();
+            }
         }
 
         aiChatbotBody.querySelectorAll('.ai-chatbot-message.assistant').forEach((message) => {
@@ -712,8 +807,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (text) message.appendChild(createMessageActions(text));
         });
 
-        setChatMode('floating');
-        setBottomLeftFloatingPosition();
+        if (supportsFloatingChat) {
+            setChatMode('floating');
+            setBottomLeftFloatingPosition();
+        }
     }
 
     /* -----------------------------------------
