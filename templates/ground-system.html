@@ -123,6 +123,17 @@
                 </div>
             </div>
 
+            <!-- Vertical resizer between ground hardware and constellations -->
+            <div class="isl-v-resizer" id="constellationVResizer"></div>
+
+            <!-- Constellations Panel (always visible, bottom half) -->
+            <div class="isl-settings-panel" id="constellationsPanel">
+                <div class="prev-run-header" style="margin-top: 12px; margin-bottom: 8px;">Constellations</div>
+                <div class="sections-wrapper" style="flex: 1; overflow-y: auto;">
+                    <div style="color:#666; font-size:12px; padding:10px;">Loading constellations from project...</div>
+                </div>
+            </div>
+
         </div>
 
         <div class="middle-area">
@@ -162,7 +173,7 @@
             </div>
 
             <div class="sections-container" id="mainSectionsContainerLeft">
-                <div class="sections-wrapper" style="padding: 0 20px;">
+                <div class="sections-wrapper" style="padding: 0 14px;">
                     
                     <!-- ── Analysis Type ── -->
                     <div class="section">
@@ -326,31 +337,29 @@
 
                 <!-- Previous Run Detail Settings Panel (always visible, bottom half) -->
                 <div class="isl-settings-panel" id="prevRunPanel">
-                    <div class="isl-settings-content" style="opacity: 1; overflow-y: auto;">
-                        <div class="section" style="border-bottom: none; margin-bottom: 0; padding: 10px 0;">
-                            <div class="prev-run-header">Previous Run</div>
-                            <div class="run-card">
-                                <div class="run-card-title">RUN_1_4/18/2026</div>
-                                <div class="run-stat-row">
-                                    <span class="run-stat-label">Best Case Power</span>
-                                    <span class="run-stat-value">−94.6 dBW</span>
-                                </div>
-                                <div class="run-stat-row">
-                                    <span class="run-stat-label">Worst Case Power</span>
-                                    <span class="run-stat-value">−105.0 dBW</span>
-                                </div>
-                                <div class="run-stat-row">
-                                    <span class="run-stat-label">Expected Margin</span>
-                                    <span class="run-stat-value">7.03 dB</span>
-                                </div>
-                                <div class="run-stat-row">
-                                    <span class="run-stat-label">Mean Contact Duration</span>
-                                    <span class="run-stat-value">648 s</span>
-                                </div>
-                                <div class="run-stat-row">
-                                    <span class="run-stat-label">Samples Used</span>
-                                    <span class="run-stat-value">10,000</span>
-                                </div>
+                    <div class="prev-run-header" style="margin-top: 12px; margin-bottom: 8px;">Previous Run</div>
+                    <div class="sections-wrapper" style="flex: 1; overflow-y: auto;">
+                        <div class="run-card">
+                            <div class="run-card-title">RUN_1_4/18/2026</div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Best Case Power</span>
+                                <span class="run-stat-value">−94.6 dBW</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Worst Case Power</span>
+                                <span class="run-stat-value">−105.0 dBW</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Expected Margin</span>
+                                <span class="run-stat-value">7.03 dB</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Mean Contact Duration</span>
+                                <span class="run-stat-value">648 s</span>
+                            </div>
+                            <div class="run-stat-row">
+                                <span class="run-stat-label">Samples Used</span>
+                                <span class="run-stat-value">10,000</span>
                             </div>
                         </div>
                     </div>

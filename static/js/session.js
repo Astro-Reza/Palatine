@@ -312,6 +312,44 @@
                     });
                 }
             }
+
+            // --- Render Constellations List from Project Data ---
+            const constellations = projectData.constellations || [];
+            const constPanelWrapper = document.querySelector('#constellationsPanel .sections-wrapper');
+            if (constPanelWrapper) {
+                constPanelWrapper.innerHTML = '';
+                if (constellations.length === 0) {
+                    constPanelWrapper.innerHTML = '<div style="color:#666; font-size:12px; padding:10px;">No constellations defined in the Space System page.</div>';
+                }
+                constellations.forEach(c => {
+                    const satellites = (parseInt(c.orbit?.orbital_planes) || 0) * (parseInt(c.orbit?.sats_per_plane) || 0);
+                    let orbitType = 'LEO';
+                    if (c.orbit?.apogee > 35000) orbitType = 'GEO';
+                    else if (c.orbit?.apogee > 2000) orbitType = 'MEO';
+                    
+                    const name = c.name || 'Unnamed Constellation';
+                    
+                    const card = document.createElement('div');
+                    card.className = 'run-card';
+                    card.innerHTML = `
+                        <div class="run-card-title" style="display: flex; align-items: center; justify-content: space-between;">
+                            <span>${name}</span>
+                            <input type="checkbox" class="constellation-checkbox" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent-green);">
+                        </div>
+                        <div class="run-stat-row">
+                            <span class="run-stat-label">Satellites deployed</span>
+                            <span class="run-stat-value">${satellites > 0 ? satellites.toLocaleString() : 'Unknown'}</span>
+                        </div>
+                        <div class="run-stat-row">
+                            <span class="run-stat-label">Orbit Model</span>
+                            <span class="run-stat-value">${orbitType}</span>
+                        </div>
+                    `;
+                    // Store the raw constellation data on the DOM element for the simulation engine
+                    card.dataset.constellation = JSON.stringify(c);
+                    constPanelWrapper.appendChild(card);
+                });
+            }
         }
 
         // Update document title and UI

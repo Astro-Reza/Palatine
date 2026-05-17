@@ -3,7 +3,7 @@
    =============================== */
 :root {
     /* Common / Panels */
-    --bg-main: #222222;
+    --bg-main: #141414;
     --bg-header: #2E2E2E;
     --text-main: #E0E0E0;
     --text-muted: #CCCCCC;
@@ -1901,7 +1901,7 @@ select.form-input {
 
 /* == ADVANCED MODAL == */
 .modal-overlay {
-    --bg-main: #222222;
+    --bg-main: #141414;
     --bg-header: #2E2E2E;
     --bg-modal: #1c1c1c;
     --bg-content: #252525;
@@ -3675,8 +3675,8 @@ select.form-input {
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: #888;
-    margin-bottom: 10px;
-    padding-bottom: 6px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
     border-bottom: 1px solid #2a2a2a;
 }
 
@@ -3684,7 +3684,7 @@ select.form-input {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
 }
 
 .setting-label {
@@ -3703,7 +3703,7 @@ select.form-input {
     color: #fff;
     border: 1px solid #3a3a3a;
     border-radius: 5px;
-    padding: 5px 8px;
+    padding: 4px 6px;
     text-align: right;
     outline: none;
     transition: border-color 0.2s;
@@ -3735,9 +3735,9 @@ select.form-input {
 .select-full {
     width: 100%;
     margin-top: 2px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     font-size: 13px;
-    padding: 7px 10px;
+    padding: 5px 8px;
     background-color: #2a2a2a;
     color: #fff;
     border: 1px solid #3a3a3a;
@@ -3825,7 +3825,7 @@ select.form-input {
 #sidePanelLeft .section {
     padding: 0;
     border-bottom: none;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 /* ===============================
