@@ -38,6 +38,10 @@ def index():
 def ground_system():
     return render_template('ground-system.html')
 
+@app.route('/link-result')
+def link_result():
+    return render_template('link-result.html')
+
 # ─── Legacy Constellation Endpoints (backward compat) ───
 
 @app.route('/api/save-constellation', methods=['POST'])

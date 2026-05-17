@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Result — Palatine 2.0</title>
+    <link rel="icon" type="image/png" href="/static/icon/site-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .sidebar {
+            width: 240px;
+            min-width: 180px;
+            max-width: 400px;
+            height: 100%;
+            background-color: #1A1A1A;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 12px 8px;
+            box-sizing: border-box;
+            font-family: 'Geologica', sans-serif;
+            border-right: 1px solid #2b2b2b;
+        }
+
+        .menu-top h2 {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 16px;
+            margin: 0 0 12px 6px;
+            user-select: none;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .menu-item {
+            color: #7a7a7a;
+            font-weight: 200;
+            font-size: 14px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-item:hover:not(.active) {
+            background-color: #222222;
+            color: #a0a0a0;
+        }
+
+        .menu-item.active {
+            background-color: #292929;
+            color: #f1f1f1;
+            font-weight: 400;
+        }
+
+        /* CSS Filter setup for WHITE SVGs turning #919191 by default */
+        .menu-icon {
+            width: 16px;
+            height: 16px;
+            transition: filter 0.2s ease;
+            filter: invert(37%) sepia(0%) saturate(0%) hue-rotate(189deg) brightness(91%) contrast(90%);
+        }
+
+        /* CSS Filter setup for WHITE SVGs turning #f1f1f1 on hover/active */
+        .menu-item:hover .menu-icon,
+        .menu-item.active .menu-icon {
+            filter: invert(6%) sepia(0%) saturate(0%) hue-rotate(38deg) brightness(96%) contrast(89%);
+        }
+
+        .divider {
+            height: 1px;
+            background-color: #2b2b2b;
+            margin: 4px 0;
+            border: none;
+        }
+
+        .menu-bottom {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Geologica', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-reset {
+            background-color: #F1FF58;
+            color: #141414;
+        }
+
+        .btn-delete {
+            background-color: #C53131;
+            color: #f1f1f1;
+        }
+
+        /* ── Resizer ── */
+        .resizer {
+            position: absolute;
+            top: 0;
+            width: 8px;
+            height: 100%;
+            cursor: ew-resize;
+            background-color: transparent;
+            z-index: 10;
+        }
+        .resizer:hover, .resizer.active {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar {
+            position: relative;
+        }
+        .sidebar .resizer {
+            right: -4px; /* Centered over right border */
+        }
+
+        .chatbot-panel {
+            position: relative;
+        }
+        .chatbot-panel .resizer {
+            left: -4px; /* Centered over left border */
+        }
+
+        /* Chatbot Right Panel Styles */
+        .chatbot-panel {
+            width: 300px;
+            min-width: 260px;
+            max-width: 450px;
+            height: 100%;
+            background-color: #1a1a1a;
+            border-left: 1px solid #2b2b2b;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* Override the absolute floating style of ai-chatbot to make it a static panel */
+        .chatbot-panel .ai-chatbot {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-width: unset;
+            min-height: unset;
+            max-width: unset;
+            max-height: unset;
+            border-radius: 0;
+            box-shadow: none;
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            display: flex;
+        }
+
+        .chatbot-panel .ai-chatbot-resize-handle,
+        .chatbot-panel .ai-chatbot-icon-btn[title="Minimize"],
+        .chatbot-panel .ai-chatbot-icon-btn[title="Close"] {
+            display: none; /* Hide drag/resize handles in panel mode */
+        }
+        
+        .chatbot-panel .ai-chatbot-header {
+            cursor: default; /* Disable grab cursor */
+        }
+
+        /* ── Run Header Component (lr-2.html) ── */
+        .header-bar {
+            background-color: #252525;
+            font-family: 'Geologica', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 32px;
+            width: 100%;
+            box-sizing: border-box;
+            border-bottom: 1px solid #2b2b2b; /* Thin border line */
+        }
+
+        /* --- Left Section: Result Name --- */
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .label-text {
+            font-weight: 200;
+            color: #A0A0A0;
+            font-size: 15px;
+            line-height: 1.2;
+        }
+
+        .name-input {
+            font-family: 'Geologica', sans-serif;
+            font-weight: 700;
+            font-size: 18px;
+            color: #FFFFFF;
+            background-color: #1A1A1A;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            margin-left: -6px;
+            width: 100%;
+            max-width: 320px;
+            box-sizing: border-box;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            line-height: 1;
+            transition: background-color 0.2s;
+        }
+
+        .name-input:focus {
+            outline: none;
+            background-color: #141414;
+        }
+
+        /* --- Middle Section: Run Data --- */
+        .header-middle {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1.5;
+        }
+
+        .data-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .data-row .label-text {
+            width: 75px;
+        }
+
+        .value-text {
+            font-weight: 700;
+            color: #FFFFFF;
+            font-size: 15px;
+            line-height: 1.2;
+        }
+
+        /* --- Right Section: Button --- */
+        .header-right {
+            display: flex;
+            justify-content: flex-end;
+            flex: 1;
+        }
+
+        .btn-export {
+            background-color: #D9FF7F;
+            color: #141414;
+            border: none;
+            outline: none;
+            padding: 10px 16px;
+            font-family: 'Geologica', sans-serif;
+            font-weight: 500;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-export:hover {
+            background-color: #c9f06c;
+        }
+
+        .btn-export:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header Navigation Container -->
+    <nav class="nav-container">
+        <div class="logo-block" id="logoMenuToggle">
+            <img src="/static/icon/palatine-icon-black.svg" alt="Palatine Logo"
+                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMTQuOCA5LjJMMjIgMTJMMTQuOCAxNC44TDEyIDIyTDkuMiAxNC44TDIgMTJMOS4yIDkuMkwxMiAyWiIgZmlsbD0iYmxhY2siLz48L3N2Zz4='">
+        </div>
+
+        <div class="project-name-container">
+            <input type="text" id="projectNameInput" class="project-name-input" value="Untitled Project"
+                title="Click to rename project">
+        </div>
+
+        <!-- Logo Dropdown Menu -->
+        <div class="logo-dropdown" id="logoDropdown">
+            <div class="logo-menu-group">
+                <div class="logo-menu-label">File</div>
+                <div class="logo-menu-item" data-action="new-project">
+                    <span>New Project</span>
+                    <span class="menu-shortcut">Ctrl+N</span>
+                </div>
+                <div class="logo-menu-item" data-action="open-project">
+                    <span>Open</span>
+                    <span class="menu-shortcut">Ctrl+O</span>
+                </div>
+                <div class="logo-menu-item" data-action="save-project">
+                    <span>Save</span>
+                    <span class="menu-shortcut">Ctrl+S</span>
+                </div>
+                <div class="logo-menu-item" data-action="export">
+                    <span>Export</span>
+                    <span class="menu-shortcut">Ctrl+E</span>
+                </div>
+            </div>
+            <div class="logo-menu-divider"></div>
+            <div class="logo-menu-group">
+                <div class="logo-menu-label">Edit</div>
+                <div class="logo-menu-item" data-action="undo">
+                    <span>Undo</span>
+                    <span class="menu-shortcut">Ctrl+Z</span>
+                </div>
+                <div class="logo-menu-item" data-action="redo">
+                    <span>Redo</span>
+                    <span class="menu-shortcut">Ctrl+Y</span>
+                </div>
+            </div>
+            <div class="logo-menu-divider"></div>
+            <div class="logo-menu-item" data-action="view">
+                <span>View</span>
+            </div>
+            <div class="logo-menu-item" data-action="settings">
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <div class="nav-menus">
+            <div class="nav-item inactive" onclick="window.location.href='/'" title="Space System">Space System</div>
+            <div class="nav-item inactive" onclick="window.location.href='/ground-system'" title="Ground System">Ground System</div>
+            <div class="nav-item active" onclick="window.location.href='/link-result'" title="Link Result">Link Result</div>
+            <div class="nav-item inactive" title="Simulations">Simulations</div>
+            <div class="nav-item inactive" onclick="if(window.SessionManager) window.SessionManager.showOpenDialog()"
+                title="Projects">Projects</div>
+        </div>
+    </nav>
+
+    <!-- Main Content Panel -->
+    <div class="main-content">
+        <div class="sidebar" id="sidebarPanel">
+            <div class="resizer" id="dragHandleSidebar"></div>
+            <div class="menu-top">
+                <h2>Analysis Menu</h2>
+                <ul class="menu-list">
+                    <li class="menu-item active">
+                        <img src="/static/icons/connection.svg" class="menu-icon" alt="">
+                        Hardware Connection
+                    </li>
+
+                    <div class="divider"></div>
+
+                    <li class="menu-item">
+                        <img src="/static/icons/statisticLR.svg" class="menu-icon" alt="">
+                        Statistical Summary
+                    </li>
+                    <li class="menu-item">
+                        <img src="/static/icons/uploadLR.svg" class="menu-icon" alt="">
+                        Receive & Transmit
+                    </li>
+                    <li class="menu-item">
+                        <img src="/static/icons/speedLR.svg" class="menu-icon" alt="">
+                        Performance Map
+                    </li>
+
+                    <div class="divider"></div>
+
+                    <li class="menu-item">
+                        <img src="/static/icons/freePlotLRsvg.svg" class="menu-icon" alt="">
+                        Free Plot
+                    </li>
+                    <li class="menu-item">
+                        <img src="/static/icons/satelliteLR.svg" class="menu-icon" alt="">
+                        Previous Run
+                    </li>
+
+                    <div class="divider"></div>
+                </ul>
+            </div>
+
+            <div class="menu-bottom">
+                <button class="btn btn-reset">Reset Simulation</button>
+                <button class="btn btn-delete">Delete Result</button>
+            </div>
+        </div>
+
+        <div class="analysis-view-panel" style="flex: 1; padding: 0; display: flex; flex-direction: column;">
+            <div class="header-bar">
+                <div class="header-left">
+                    <span class="label-text">Result Name</span>
+                    <input type="text" class="name-input" value="RUN_1_4/18/2026">
+                </div>
+
+                <div class="header-middle">
+                    <div class="data-row">
+                        <span class="label-text">Run Time</span>
+                        <span class="value-text">5 minutes, 36 seconds</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="label-text">Time Run</span>
+                        <span class="value-text">15:45 | 18 May 2026</span>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <button class="btn-export">Export Summary</button>
+                </div>
+            </div>
+            
+            <div class="analysis-content-area" style="flex: 1; padding: 20px; overflow-y: auto;">
+                <!-- Main dynamic content/plots will go here -->
+            </div>
+        </div>
+
+        <div class="chatbot-panel" id="chatbotPanel">
+            <div class="resizer" id="dragHandleChatbot"></div>
+            <section class="ai-chatbot" id="aiChatbot" aria-label="Arcturus chatbot">
+                <header class="ai-chatbot-header" id="aiChatbotHeader">
+                    <div class="ai-chatbot-title-group">
+                        <img class="ai-chatbot-logo" src="/static/icons/palatine-chatbot-logo.svg" alt="">
+                        <span class="ai-chatbot-title">Arcturus</span>
+                    </div>
+                    <div class="ai-chatbot-controls" aria-label="Arcturus controls">
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiMinimizeBtn" title="Minimize">
+                            <img src="/static/icon/buttonMinimize.svg" alt="">
+                        </button>
+                        <button class="ai-chatbot-icon-btn" type="button" id="aiCloseBtn" title="Close">
+                            <img src="/static/icon/buttonClose.svg" alt="">
+                        </button>
+                    </div>
+                </header>
+                <div class="ai-chatbot-body" id="aiChatbotMessages">
+                    <div class="ai-chatbot-message assistant">
+                        <div class="ai-chatbot-message-content">
+                            <p>Analysis mode activated. I can help interpret the link budget statistics and performance maps.</p>
+                        </div>
+                    </div>
+                </div>
+                <form class="ai-chatbot-input-row" id="aiChatbotForm" onsubmit="event.preventDefault();">
+                    <button class="ai-chatbot-mode-toggle" id="aiChatbotModeToggle" type="button" title="Switch to Instant Mode">
+                        <img id="aiChatbotModeIcon" src="/static/icons/thinkBlack.svg" alt="">
+                    </button>
+                    <input type="text" id="aiChatbotInput" placeholder="Ask Arcturus..." autocomplete="off">
+                    <button type="submit" title="Send">Send</button>
+                </form>
+                <button class="ai-chatbot-resize-handle" id="aiChatbotResizeHandle" type="button"
+                    aria-label="Resize Arcturus"></button>
+            </section>
+        </div>
+    </div>
+
+    <!-- Open Project Modal -->
+    <div id="openProjectModal" class="project-modal-overlay" style="display: none;">
+        <div class="project-modal">
+            <div class="project-modal-header">
+                <span class="project-modal-title">Open Project</span>
+                <button class="project-modal-close" id="closeOpenModal">&times;</button>
+            </div>
+            <div class="project-modal-body">
+                <div class="project-list" id="projectList">
+                    <div class="project-list-loading">Loading projects...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Scripts -->
+    <script src="/static/js/session.js"></script>
+    <script>
+        // --- Panel Resizing Logic ---
+        
+        // Sidebar (Left Panel)
+        const resizerSidebar = document.getElementById('dragHandleSidebar');
+        const sidebarPanel = document.getElementById('sidebarPanel');
+        let isResizingSidebar = false;
+
+        if (resizerSidebar && sidebarPanel) {
+            resizerSidebar.addEventListener('mousedown', (e) => {
+                isResizingSidebar = true;
+                resizerSidebar.classList.add('active');
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+            });
+        }
+
+        // Chatbot Panel (Right Panel)
+        const resizerChatbot = document.getElementById('dragHandleChatbot');
+        const chatbotPanel = document.getElementById('chatbotPanel');
+        let isResizingChatbot = false;
+
+        if (resizerChatbot && chatbotPanel) {
+            resizerChatbot.addEventListener('mousedown', (e) => {
+                isResizingChatbot = true;
+                resizerChatbot.classList.add('active');
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+            });
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (isResizingSidebar && sidebarPanel) {
+                // Width grows as mouse moves to the right, clamped to a minimum of 180px and maximum of 400px
+                let newWidth = Math.max(180, Math.min(400, e.clientX));
+                sidebarPanel.style.width = `${newWidth}px`;
+            }
+            if (isResizingChatbot && chatbotPanel) {
+                // Width grows as mouse moves to the left (screen width - mouseX), clamped to a minimum of 260px and maximum of 450px
+                let newWidth = Math.max(260, Math.min(450, window.innerWidth - e.clientX));
+                chatbotPanel.style.width = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizingSidebar) {
+                isResizingSidebar = false;
+                if (resizerSidebar) resizerSidebar.classList.remove('active');
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            }
+            if (isResizingChatbot) {
+                isResizingChatbot = false;
+                if (resizerChatbot) resizerChatbot.classList.remove('active');
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            }
+        });
+
+        // Sidebar item active toggles
+        const sidebarMenuItems = document.querySelectorAll('.sidebar .menu-item');
+        sidebarMenuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                sidebarMenuItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // Navigation bar interactivity
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', function () {
+                if (!this.getAttribute('onclick')) {
+                    navItems.forEach(nav => {
+                        nav.classList.remove('active');
+                        nav.classList.add('inactive');
+                    });
+                    this.classList.remove('inactive');
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // Logo dropdown menu toggle
+        const logoToggle = document.getElementById('logoMenuToggle');
+        const logoDropdown = document.getElementById('logoDropdown');
+
+        logoToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            logoDropdown.classList.toggle('open');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!logoDropdown.contains(e.target) && !logoToggle.contains(e.target)) {
+                logoDropdown.classList.remove('open');
+            }
+        });
+
+        // Close dropdown on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                logoDropdown.classList.remove('open');
+            }
+        });
+
+        // Menu item click handlers wired to SessionManager
+        document.querySelectorAll('.logo-menu-item').forEach(item => {
+            item.addEventListener('click', function () {
+                const action = this.getAttribute('data-action');
+                logoDropdown.classList.remove('open');
+
+                if (window.SessionManager) {
+                    switch (action) {
+                        case 'new-project': SessionManager.newProject(); break;
+                        case 'open-project': SessionManager.showOpenDialog(); break;
+                        case 'save-project': SessionManager.saveProject(); break;
+                        case 'export': SessionManager.exportProject(); break;
+                        default: console.log('Menu action (no handler):', action);
+                    }
+                }
+            });
+        });
+
+        // Bind Open Project modal close btn
+        const closeOpenModalBtn = document.getElementById('closeOpenModal');
+        if (closeOpenModalBtn) {
+            closeOpenModalBtn.addEventListener('click', () => {
+                document.getElementById('openProjectModal').style.display = 'none';
+            });
+        }
+
+        // Initialize Session on Page Load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.SessionManager && typeof window.SessionManager.initSession === 'function') {
+                window.SessionManager.initSession();
+            }
+        });
+    </script>
+</body>
+
+</html>
