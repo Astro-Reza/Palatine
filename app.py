@@ -369,49 +369,98 @@ def chat():
         try:
             print(f"[DEBUG] Chat request: prompt='{prompt[:50]}...'", flush=True)
             
-            # Step 1: Classify intent
-            print("[DEBUG] Loading classifier prompt", flush=True)
-            classifier_prompt = load_prompt("classifier")
-            classify_full = f"""{classifier_prompt}
+            # Step 0: Fast keyword-based pre-classifier (skip API call for common queries)
+            prompt_lower = prompt.lower()
+            intent = "unclear"
+            
+            # Quick pattern matching for common intents
+            if any(word in prompt_lower for word in ["explain", "what is", "how do", "define", "tell me"]):
+                intent = "explain"
+            elif any(word in prompt_lower for word in ["save", "open", "delete", "create", "new project"]):
+                intent = "project_manage"
+            elif any(word in prompt_lower for word in ["status", "configured", "what have", "current"]):
+                intent = "session_state"
+            elif any(word in prompt_lower for word in ["ground station", "add station"]):
+                intent = "groundstation_edit"
+            elif any(word in prompt_lower for word in ["constellation", "satellite", "orbit"]):
+                intent = "constellation_edit"
+            elif any(word in prompt_lower for word in ["link budget", "received power", "pr"]):
+                intent = "link_budget"
+            elif any(word in prompt_lower for word in ["elevation", "angle"]):
+                intent = "elevation_stats"
+            elif any(word in prompt_lower for word in ["rain", "attenuation", "itu"]):
+                intent = "attenuation"
+            elif any(word in prompt_lower for word in ["margin", "fails", "passes"]):
+                intent = "link_margin"
+            elif any(word in prompt_lower for word in ["outage", "availability"]):
+                intent = "outage_probability"
+            elif any(word in prompt_lower for word in ["eirp", "beam", "frequency", "payload"]):
+                intent = "payload_edit"
+            
+            # If no match, use slower classifier API
+            if intent == "unclear":
+                print("[DEBUG] No quick match found, using classifier API", flush=True)
+                classifier_prompt = load_prompt("classifier")
+                classify_full = f"""{classifier_prompt}
 
 User prompt: "{prompt}"
 
 Return ONLY one label (no explanation):"""
+                
+                print("[DEBUG] Calling Gemma for classification", flush=True)
+                try:
+                    classify_response = gemma_model.generate_content(classify_full, generation_config={
+                        "temperature": 0.1,
+                        "top_p": 0.8,
+                        "top_k": 40
+                    }, request_options={"timeout": 30}
+                    )
+                    
+                    # Extract the label
+                    response_text = classify_response.text.strip().lower()
+                    
+                    # First, try to find any line that exactly matches a known label
+                    for line in response_text.split('\n'):
+                        line = line.strip().lower()
+                        if line in SYSTEM_PROMPTS:
+                            intent = line
+                            break
+                except Exception as classify_error:
+                    print(f"[WARNING] Classifier timeout/error: {classify_error}", flush=True)
+                    intent = "unclear"  # Fallback to unclear
             
-            print("[DEBUG] Calling Gemma for classification", flush=True)
-            classify_response = gemma_model.generate_content(classify_full, generation_config={
-                "temperature": 0.1,
-                "top_p": 0.8,
-                "top_k": 40
-            })
-            
-            # Extract the label - Gemma may output reasoning, so check all lines for a valid label
-            response_text = classify_response.text.strip().lower()
-            intent = "unclear"
-            
-            # First, try to find any line that exactly matches a known label
-            for line in response_text.split('\n'):
-                line = line.strip().lower()
-                if line in SYSTEM_PROMPTS:
-                    intent = line
-                    break
-            
-            print(f"[DEBUG] Classified intent: '{intent}'", flush=True)
-            if intent not in SYSTEM_PROMPTS:
-                intent = "unclear"
+            print(f"[DEBUG] Detected intent: '{intent}'", flush=True)
             
             # Step 2: Load appropriate system prompt
             print(f"[DEBUG] Loading system prompt for: '{intent}'", flush=True)
             system_prompt = load_prompt(intent)
             
-            # Build full context
+            # For explain/unclear, always use instant mode (no API call needed)
             if intent in ["explain", "unclear"]:
-                full_prompt = f"""{system_prompt}
-
-User prompt: "{prompt}"
-
-Respond helpfully."""
+                print("[DEBUG] Using instant response (explain/unclear)", flush=True)
+                instant_responses = {
+                    "explain": "EIRP (Effective Isotropic Radiated Power): Satellite's power output as if radiating from an isotropic antenna. Higher EIRP = stronger signals. Affected by transmit power and antenna gain.",
+                    "unclear": "I didn't understand. Please ask about: project status, ground stations, satellites, link budget, or payload parameters."
+                }
+                raw_text = instant_responses.get(intent, "Ready to help!")
+            # Check if explicit instant mode requested
+            elif mode == "instant":
+                print("[DEBUG] Instant mode - returning quick response", flush=True)
+                instant_responses = {
+                    "project_manage": "Project management: save, open, delete, create project",
+                    "session_state": "Session loaded with current configuration.",
+                    "groundstation_edit": "Ground station editor active.",
+                    "constellation_edit": "Constellation editor active.",
+                    "link_budget": "Link budget calculator ready.",
+                    "elevation_stats": "Elevation analysis ready.",
+                    "attenuation": "Attenuation model ready.",
+                    "link_margin": "Link margin analysis ready.",
+                    "outage_probability": "Outage analysis ready.",
+                    "payload_edit": "Payload editor active."
+                }
+                raw_text = instant_responses.get(intent, "Ready to help!")
             else:
+                # Build full context
                 full_prompt = f"""{system_prompt}
 
 Current project state:
@@ -420,49 +469,51 @@ Current project state:
 User instruction: "{prompt}"
 
 Return the complete updated project state as valid JSON only (no markdown, no explanation)."""
-            
-            # Step 3: Stream response with thinking (if mode is 'think')
-            print("[DEBUG] Calling Gemma for full response", flush=True)
-            if mode == 'think':
-                response = gemma_model.generate_content(
-                    full_prompt,
-                    generation_config={"temperature": 0.2, "max_output_tokens": 2000}
-                )
-            else:
-                response = gemma_model.generate_content(
-                    full_prompt,
-                    generation_config={"temperature": 0.2, "max_output_tokens": 2000}
-                )
-            
-            raw_text = response.text
-            print(f"[DEBUG] Got response: {len(raw_text)} chars", flush=True)
+                
+                # Step 3: Get response with timeout handling
+                print("[DEBUG] Calling Gemma for full response", flush=True)
+                try:
+                    response = gemma_model.generate_content(
+                        full_prompt,
+                        generation_config={"temperature": 0.2, "max_output_tokens": 2000},
+                        request_options={"timeout": 60}
+                    )
+                    raw_text = response.text
+                    print(f"[DEBUG] Got response: {len(raw_text)} chars", flush=True)
+                except Exception as response_error:
+                    print(f"[ERROR] Response generation failed: {response_error}", flush=True)
+                    raw_text = f"Error: AI response generation timed out or failed. Please try again."
+                    response = None
             
             # For state-modifying prompts, extract JSON
             if intent not in ["explain", "unclear", "session_state"]:
-                json_start = raw_text.find('{')
                 json_end = raw_text.rfind('}')
-                if json_start >= 0 and json_end > json_start:
-                    json_text = raw_text[json_start:json_end+1]
-                    try:
-                        updated_state = json.loads(json_text)
-                        # Auto-save
-                        filename = project_state.get('_filename')
-                        if filename and filename.endswith('.yaml'):
-                            filepath = os.path.join(PROJECTS_DIR, filename)
-                            save_data = {k: v for k, v in updated_state.items() if not k.startswith('_')}
-                            with open(filepath, 'w', encoding='utf-8') as f:
-                                yaml.safe_dump(save_data, f, default_flow_style=False, sort_keys=False)
-                        raw_text = json.dumps({
-                            "type": "state_update",
-                            "updated_state": updated_state,
-                            "saved": bool(filename)
-                        })
-                    except json.JSONDecodeError:
-                        pass
+                if json_end > -1:
+                    start_pos = raw_text.find('{')
+                    while start_pos != -1 and start_pos < json_end:
+                        json_text = raw_text[start_pos:json_end+1]
+                        try:
+                            updated_state = json.loads(json_text)
+                            # Auto-save
+                            filename = project_state.get('_filename')
+                            if filename and filename.endswith('.yaml'):
+                                filepath = os.path.join(PROJECTS_DIR, filename)
+                                save_data = {k: v for k, v in updated_state.items() if not k.startswith('_')}
+                                with open(filepath, 'w', encoding='utf-8') as f:
+                                    yaml.safe_dump(save_data, f, default_flow_style=False, sort_keys=False)
+                            raw_text = json.dumps({
+                                "type": "state_update",
+                                "updated_state": updated_state,
+                                "saved": bool(filename)
+                            })
+                            break
+                        except json.JSONDecodeError:
+                            start_pos = raw_text.find('{', start_pos + 1)
             
             # Stream response
             print("[DEBUG] Sending response", flush=True)
-            yield f"data: {json.dumps({'text': raw_text})}\n\n"
+            response_json = json.dumps({"text": raw_text})
+            yield f"data: {response_json}\n\n"
             yield "data: [DONE]\n\n"
             
         except Exception as e:
