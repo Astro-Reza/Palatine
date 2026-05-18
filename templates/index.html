@@ -240,11 +240,15 @@
                     </div>
                 </div>
                 <form class="ai-chatbot-input-row" id="aiChatbotForm">
-                    <button class="ai-chatbot-mode-toggle" id="aiChatbotModeToggle" type="button" title="Switch to Instant Mode">
-                        <img id="aiChatbotModeIcon" src="/static/icons/thinkBlack.svg" alt="">
-                    </button>
-                    <input type="text" id="aiChatbotInput" placeholder="Ask Arcturus..." autocomplete="off">
-                    <button type="submit" title="Send">Send</button>
+                    <div class="ai-chatbot-prompt-group">
+                        <textarea class="ai-chatbot-prompt-input" id="aiChatbotInput" placeholder="Ask Arcturus..." autocomplete="off" rows="1"></textarea>
+                        <div class="ai-chatbot-prompt-addon">
+                            <button class="ai-chatbot-mode-toggle" id="aiChatbotModeToggle" type="button" title="Switch to Instant Mode">
+                                <img id="aiChatbotModeIcon" src="/static/icons/thinkBlack.svg" alt="">
+                            </button>
+                            <button class="ai-chatbot-send-btn" type="submit" title="Send">Send</button>
+                        </div>
+                    </div>
                 </form>
                 <button class="ai-chatbot-resize-handle" id="aiChatbotResizeHandle" type="button"
                     aria-label="Resize Arcturus"></button>
