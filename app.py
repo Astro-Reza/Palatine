@@ -1,10 +1,20 @@
 import os
 import json
 import yaml
+import re
 from datetime import datetime, timezone
 from flask import Flask, render_template, send_from_directory, abort, request, jsonify
+import google.generativeai as genai
 
 app = Flask(__name__, template_folder='templates', static_url_path='/none')
+
+# ─── Gemma AI Configuration ───
+GEMMA_API_KEY = os.environ.get("GEMMA_API_KEY")
+if GEMMA_API_KEY:
+    genai.configure(api_key=GEMMA_API_KEY)
+    gemma_model = genai.GenerativeModel('gemma-4-26b-a4b-it')
+else:
+    gemma_model = None
 
 V2_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'))
 V1_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Palatine 1.0', 'static'))
@@ -356,6 +366,175 @@ def chat():
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+# ─── AI Integration (Classifier + Prompt Router) ───
+
+# System prompts registry
+SYSTEM_PROMPTS = {
+    "classifier":          "systemPrompt/classifier.md",
+    "project_manage":      "systemPrompt/projectManager.md",
+    "session_state":       "systemPrompt/sessionExplainer.md",
+    "constellation_edit":  "systemPrompt/constellationEditor.md",
+    "payload_edit":        "systemPrompt/payloadEditor.md",
+    "groundstation_edit":  "systemPrompt/groundSystem/groundStationEditor.md",
+    "link_budget":         "systemPrompt/linkBudgetCalculator.md",
+    "elevation_stats":     "systemPrompt/elevationAnalyst.md",
+    "attenuation":         "systemPrompt/attenuationAdvisor.md",
+    "link_margin":         "systemPrompt/linkMarginAnalyst.md",
+    "outage_probability":  "systemPrompt/outageReporter.md",
+    "explain":             "systemPrompt/platformExplainer.md",
+    "unclear":             "systemPrompt/errorHandler.md",
+}
+
+def load_prompt(intent: str) -> str:
+    """Load system prompt from file."""
+    filepath = SYSTEM_PROMPTS.get(intent, SYSTEM_PROMPTS["unclear"])
+    prompt_path = os.path.join(os.path.dirname(__file__), filepath)
+    if os.path.exists(prompt_path):
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "You are a helpful AI assistant for the Palatine satellite mission planning platform."
+
+@app.route('/api/ai/classify', methods=['POST'])
+def classify_intent():
+    """Classify user prompt intent for routing."""
+    if not gemma_model:
+        return jsonify({"error": "Gemma API not configured"}), 503
+    
+    data = request.json or {}
+    user_prompt = data.get('prompt', '')
+    
+    if not user_prompt:
+        return jsonify({"error": "No prompt provided"}), 400
+    
+    try:
+        classifier_prompt = load_prompt("classifier")
+        
+        full_prompt = f"""{classifier_prompt}
+
+User prompt: "{user_prompt}"
+
+Return ONLY one label (no explanation):"""
+        
+        response = gemma_model.generate_content(full_prompt, generation_config={
+            "temperature": 0.3,
+            "top_p": 0.8,
+            "top_k": 40
+        })
+        
+        label = response.text.strip().lower()
+        # Ensure label is valid
+        if label not in SYSTEM_PROMPTS:
+            label = "unclear"
+        
+        return jsonify({"intent": label, "confidence": 0.95}), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e), "intent": "unclear"}), 500
+
+@app.route('/api/ai/prompt', methods=['POST'])
+def process_ai_prompt():
+    """Process user prompt with appropriate system prompt."""
+    if not gemma_model:
+        return jsonify({"error": "Gemma API not configured"}), 503
+    
+    data = request.json or {}
+    user_prompt = data.get('prompt', '')
+    intent = data.get('intent', 'unclear')
+    project_state = data.get('project_state', {})
+    
+    if not user_prompt:
+        return jsonify({"error": "No prompt provided"}), 400
+    
+    try:
+        system_prompt = load_prompt(intent)
+        
+        # Build full context based on intent
+        if intent in ["explain", "unclear"]:
+            # Read-only, no state needed
+            full_prompt = f"""{system_prompt}
+
+User prompt: "{user_prompt}"
+
+Respond helpfully."""
+        elif intent == "session_state":
+            # Read-only, needs state
+            full_prompt = f"""{system_prompt}
+
+Current project state:
+{json.dumps(project_state, indent=2)}
+
+User prompt: "{user_prompt}"
+
+Summarize the current configuration."""
+        else:
+            # Modify state, needs validation
+            full_prompt = f"""{system_prompt}
+
+Current project state:
+{json.dumps(project_state, indent=2)}
+
+User instruction: "{user_prompt}"
+
+Return the complete updated project state as valid JSON only (no markdown, no explanation)."""
+        
+        response = gemma_model.generate_content(full_prompt, generation_config={
+            "temperature": 0.2,
+            "top_p": 0.8,
+            "top_k": 40,
+            "max_output_tokens": 2000
+        })
+        
+        raw_response = response.text.strip()
+        
+        # For read-only prompts, return text directly
+        if intent in ["explain", "unclear", "session_state"]:
+            return jsonify({
+                "type": "text",
+                "response": raw_response,
+                "intent": intent
+            }), 200
+        
+        # For state-modifying prompts, parse JSON
+        try:
+            # Strip markdown code fences if present
+            json_text = re.sub(r'^```json\s*', '', raw_response)
+            json_text = re.sub(r'^```\s*', '', json_text)
+            json_text = re.sub(r'\s*```$', '', json_text)
+            
+            # Extract JSON object from response (find the first { and last })
+            json_start = json_text.find('{')
+            json_end = json_text.rfind('}')
+            
+            if json_start >= 0 and json_end > json_start:
+                json_text = json_text[json_start:json_end+1]
+            
+            updated_state = json.loads(json_text)
+            
+            # Auto-save to YAML if filename provided
+            filename = project_state.get('_filename')
+            if filename and filename.endswith('.yaml'):
+                filepath = os.path.join(PROJECTS_DIR, filename)
+                save_data = {k: v for k, v in updated_state.items() if not k.startswith('_')}
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    yaml.safe_dump(save_data, f, default_flow_style=False, sort_keys=False)
+            
+            return jsonify({
+                "type": "state_update",
+                "updated_state": updated_state,
+                "intent": intent,
+                "saved": bool(filename)
+            }), 200
+        
+        except json.JSONDecodeError as e:
+            return jsonify({
+                "error": f"Invalid JSON response from AI: {str(e)}",
+                "raw_response": raw_response,
+                "intent": intent
+            }), 422
+    
+    except Exception as e:
+        return jsonify({"error": str(e), "intent": intent}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
