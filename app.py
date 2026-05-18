@@ -374,7 +374,7 @@ def chat():
             intent = "unclear"
             
             # Quick pattern matching for common intents
-            if any(word in prompt_lower for word in ["explain", "what is", "how do", "define", "tell me"]):
+            if any(word in prompt_lower for word in ["explain", "what is", "how do", "define", "tell me", "what can you", "help", "who are you"]):
                 intent = "explain"
             elif any(word in prompt_lower for word in ["save", "open", "delete", "create", "new project"]):
                 intent = "project_manage"
@@ -435,16 +435,8 @@ Return ONLY one label (no explanation):"""
             print(f"[DEBUG] Loading system prompt for: '{intent}'", flush=True)
             system_prompt = load_prompt(intent)
             
-            # For explain/unclear, always use instant mode (no API call needed)
-            if intent in ["explain", "unclear"]:
-                print("[DEBUG] Using instant response (explain/unclear)", flush=True)
-                instant_responses = {
-                    "explain": "EIRP (Effective Isotropic Radiated Power): Satellite's power output as if radiating from an isotropic antenna. Higher EIRP = stronger signals. Affected by transmit power and antenna gain.",
-                    "unclear": "I didn't understand. Please ask about: project status, ground stations, satellites, link budget, or payload parameters."
-                }
-                raw_text = instant_responses.get(intent, "Ready to help!")
             # Check if explicit instant mode requested
-            elif mode == "instant":
+            if mode == "instant":
                 print("[DEBUG] Instant mode - returning quick response", flush=True)
                 instant_responses = {
                     "project_manage": "Project management: save, open, delete, create project",
@@ -456,12 +448,17 @@ Return ONLY one label (no explanation):"""
                     "attenuation": "Attenuation model ready.",
                     "link_margin": "Link margin analysis ready.",
                     "outage_probability": "Outage analysis ready.",
-                    "payload_edit": "Payload editor active."
+                    "payload_edit": "Payload editor active.",
+                    "explain": "EIRP (Effective Isotropic Radiated Power): Satellite's power output as if radiating from an isotropic antenna. Higher EIRP = stronger signals. Affected by transmit power and antenna gain.",
+                    "unclear": "I didn't understand. Please ask about: project status, ground stations, satellites, link budget, or payload parameters."
                 }
                 raw_text = instant_responses.get(intent, "Ready to help!")
             else:
                 # Build full context
-                full_prompt = f"""{system_prompt}
+                if intent in ["explain", "unclear", "session_state"]:
+                    full_prompt = f"""{system_prompt}\n\nUser instruction: "{prompt}"\n\nProvide a natural language response. You MUST put all your internal reasoning, drafts, and planning inside <think>...</think> tags. Only your final, polished response to the user should be outside the tags."""
+                else:
+                    full_prompt = f"""{system_prompt}
 
 Current project state:
 {json.dumps(project_state, indent=2)}
@@ -475,16 +472,75 @@ Return the complete updated project state as valid JSON only (no markdown, no ex
                 try:
                     response = gemma_model.generate_content(
                         full_prompt,
-                        generation_config={"temperature": 0.2, "max_output_tokens": 2000},
-                        request_options={"timeout": 60}
+                        generation_config={"temperature": 0.2, "max_output_tokens": 4000},
+                        request_options={"timeout": 300}
                     )
                     raw_text = response.text
                     print(f"[DEBUG] Got response: {len(raw_text)} chars", flush=True)
                 except Exception as response_error:
+                    import traceback
+                    err_str = traceback.format_exc()
                     print(f"[ERROR] Response generation failed: {response_error}", flush=True)
+                    try:
+                        with open("/tmp/palatine_error.txt", "w") as ef:
+                            ef.write(err_str)
+                    except:
+                        pass
                     raw_text = f"Error: AI response generation timed out or failed. Please try again."
                     response = None
             
+            # Extract thought tags for all intents
+            thought_text = ""
+            if response:
+                think_matches = re.findall(r'<think>(.*?)(?:</think>|$)', raw_text, re.DOTALL | re.IGNORECASE)
+                if think_matches:
+                    thought_text = "\n\n".join(m.strip() for m in think_matches)
+                    raw_text = re.sub(r'<think>.*?(?:</think>|$)', '', raw_text, flags=re.DOTALL | re.IGNORECASE).strip()
+                
+                # Fallback heuristic: If it still generated bullet-point drafts instead of tags
+                if re.search(r'^\s*[\*\-]\s*(Draft|Goal:|System Prompt|Self-Correction|Internal Monologue|User input:)', raw_text, re.IGNORECASE | re.MULTILINE):
+                    lines = raw_text.split('\n')
+                    thought_lines = []
+                    final_lines = []
+                    
+                    # Try to find a clear marker for the final answer
+                    marker_idx = -1
+                    for i, line in enumerate(lines):
+                        lower_line = line.lower()
+                        if "drafting the final response" in lower_line or "final response:" in lower_line or "final answer:" in lower_line:
+                            marker_idx = i
+                            break
+                            
+                    if marker_idx != -1:
+                        thought_lines = lines[:marker_idx+1]
+                        final_lines = lines[marker_idx+1:]
+                    else:
+                        # Fallback: Find the transition to a normal, unindented, non-bullet paragraph
+                        split_idx = -1
+                        for i, line in enumerate(lines):
+                            if not line.strip():
+                                continue
+                            if not line.strip().startswith('*') and not line.strip().startswith('-') and not line.startswith(' ') and not line.startswith('\t'):
+                                split_idx = i
+                                break
+                                
+                        if split_idx != -1:
+                            thought_lines = lines[:split_idx]
+                            final_lines = lines[split_idx:]
+                        else:
+                            # If no split found, assume everything is thought except maybe the last paragraph
+                            thought_lines = lines
+                            final_lines = []
+                            
+                    if thought_lines and final_lines:
+                        new_thought = '\n'.join(thought_lines).strip()
+                        thought_text = (thought_text + "\n\n" + new_thought).strip()
+                        raw_text = '\n'.join(final_lines).strip()
+                        
+                        # Clean up quotes if the model wrapped the final answer in quotes
+                        if raw_text.startswith('"') and raw_text.endswith('"'):
+                            raw_text = raw_text[1:-1]
+
             # For state-modifying prompts, extract JSON
             if intent not in ["explain", "unclear", "session_state"]:
                 json_end = raw_text.rfind('}')
@@ -512,7 +568,17 @@ Return the complete updated project state as valid JSON only (no markdown, no ex
             
             # Stream response
             print("[DEBUG] Sending response", flush=True)
+            if thought_text:
+                yield f"data: {json.dumps({'thought': thought_text})}\n\n"
             response_json = json.dumps({"text": raw_text})
+            
+            # DEBUG LOGGING
+            try:
+                with open("/tmp/palatine_debug.txt", "w") as dbg:
+                    dbg.write("=== THOUGHT ===\n" + thought_text + "\n=== RAW ===\n" + raw_text)
+            except Exception:
+                pass
+                
             yield f"data: {response_json}\n\n"
             yield "data: [DONE]\n\n"
             

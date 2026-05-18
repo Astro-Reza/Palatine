@@ -810,6 +810,17 @@
         /** Get current project metadata. */
         getMeta() {
             return { ..._projectMeta, filename: _currentFilename };
+        },
+
+        /** Get the complete project state for AI context */
+        getCurrentState() {
+            return collectSessionState();
+        },
+
+        /** Apply a partial state update from the AI */
+        applyStateUpdate(updatedState) {
+            // Apply only the updated state without destroying current layout
+            applySessionState(updatedState);
         }
     };
 

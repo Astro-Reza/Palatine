@@ -28,6 +28,7 @@
 - Contains "link margin" → link_margin
 - Contains "outage" or "availability" → outage_probability
 - Contains "explain" or "what is" or "how do" or "define" → explain
+- **If the prompt is asking for general knowledge, coding help, poetry, or anything unrelated to Palatine's features → unclear**
 - Nothing matches → unclear
 
 ## Output Format:
