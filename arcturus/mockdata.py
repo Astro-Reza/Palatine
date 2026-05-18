@@ -6,6 +6,12 @@ Based on:
   Based on the Statistics of the Elevation Angle. IEEE Access, 10, 14518–14528.
   https://doi.org/10.1109/ACCESS.2022.3147829
 
+Added ITU Models:
+  - Free Space Path Loss (FSPL) via ITU-R P.525
+  - Atmospheric Loss via simplified ITU-R P.676
+  - Miscellaneous Losses (Pointing, polarization mismatch, etc.)
+  - Dual Tx (Uplink) and Rx (Downlink) Support
+
 Outputs:
   - mockdata.csv  : flat tabular summary for front-end tables / charts
   - mockdata.json : hierarchical structured data for front-end APIs / dashboards
@@ -42,11 +48,26 @@ MU_EARTH            = 398600.4418  # Gravitational parameter (km³/s²)
 OMEGA_EARTH         = 7.2921159e-5 # Earth rotation rate (rad/s)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. LINK BUDGET PARAMETERS  (Table 5 of the paper)
+# 2. LINK BUDGET PARAMETERS  (Table 5 of the paper & ITU Additions)
 # ─────────────────────────────────────────────────────────────────────────────
+# Downlink (Rx) Parameters
 EIRP        = 56.0      # Effective Isotropic Radiated Power (dBW)
-G_R         = 40.0      # Receiver antenna gain (dBi)
+G_R         = 40.0      # Earth Station receiver antenna gain (dBi)
 P_REQ       = -105.0    # Required received power (dBW)
+FREQ_RX_GHZ = 20.0      # Downlink frequency (GHz)
+
+# Uplink (Tx) Parameters
+ES_EIRP_DBW = 60.0      # Earth Station EIRP for Uplink (dBW)
+SAT_G_R_DBI = 35.0      # Satellite receiver gain for Uplink (dBi)
+FREQ_TX_GHZ = 30.0      # Uplink frequency (GHz)
+
+# Additional Losses
+MISC_LOSS_RX_DB    = 2.0  # Miscellaneous loss Rx (Pointing, polarization) (dB)
+MISC_LOSS_TX_DB    = 2.0  # Miscellaneous loss Tx (Pointing, polarization) (dB)
+ATMOS_ZENITH_RX_DB = 0.5  # Zenith atmospheric loss Rx (dB)
+ATMOS_ZENITH_TX_DB = 0.8  # Zenith atmospheric loss Tx (dB)
+
+# Elevation thresholds
 THETA_MIN_1 = 5.0       # Min elevation for 1 % exceedance (°)
 THETA_MIN_5 = 9.0       # Min elevation for 5 % exceedance (°)
 
@@ -74,17 +95,33 @@ def calculate_At(theta: np.ndarray, coefficients: list) -> np.ndarray:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 3.5. HELPER: DISTANCE & ITU LOSS MODELS
+# ─────────────────────────────────────────────────────────────────────────────
+def calculate_distance(theta_deg: np.ndarray) -> np.ndarray:
+    """Calculates distance to satellite given elevation angle."""
+    theta_rad = np.radians(theta_deg)
+    r_e = R_EARTH_KM
+    h = ALTITUDE_KM
+    # Law of cosines implementation for Earth-Sat geometry
+    return -r_e * np.sin(theta_rad) + np.sqrt((r_e * np.sin(theta_rad))**2 + (r_e + h)**2 - r_e**2)
+
+def calculate_fspl(dist_km: np.ndarray, freq_ghz: float) -> np.ndarray:
+    """Free Space Path Loss based on ITU-R P.525."""
+    return 92.45 + 20 * np.log10(freq_ghz) + 20 * np.log10(dist_km)
+
+def calculate_atmos(theta_deg: np.ndarray, zenith_attn: float) -> np.ndarray:
+    """Atmospheric attenuation based on simplified ITU-R P.676."""
+    # Clip elevation to 1 degree minimum to avoid div by zero at horizon
+    return zenith_attn / np.sin(np.radians(np.clip(theta_deg, 1.0, 90.0)))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 4. ORBITAL PROPAGATION & ELEVATION CALCULATION
 # ─────────────────────────────────────────────────────────────────────────────
 def run_simulation() -> tuple[np.ndarray, np.ndarray]:
     """
     Propagates a Walker-Delta constellation over SIMULATION_DAYS at
     TIME_STEP_S resolution using Keplerian mechanics (circular orbit).
-
-    Returns
-    -------
-    t                      : time array (s)
-    max_elevation_over_time: per-timestep maximum elevation across all sats (°)
     """
     print(f"[1/4] Running orbital propagation "
           f"({TOTAL_SATS} sats, {SIMULATION_DAYS} days @ {TIME_STEP_S}s) …")
@@ -174,7 +211,6 @@ def fit_gamma(elevation_data: np.ndarray, theta_min: float) -> dict:
         "q3_theta_deg":     round(float(np.percentile(valid, 75)), 4),
         "min_theta_deg":    round(float(np.min(valid)), 4),
         "max_theta_deg":    round(float(np.max(valid)), 4),
-        # Curve arrays (sampled at 500 points) for charting
         "pdf_curve": {
             "theta_deg": [round(v, 3) for v in theta_vals.tolist()],
             "pdf":       [round(v, 8) for v in pdf_vals.tolist()],
@@ -222,7 +258,6 @@ def analyze_contact_duration(t: np.ndarray, el_deg: np.ndarray) -> dict:
         np.mean(durations[days_floor == d]) for d in unique_days
     ])
 
-    # 5-day moving average & median
     W = 5
     if len(daily_mean) >= W:
         mov_avg = np.convolve(daily_mean, np.ones(W) / W, mode='valid').tolist()
@@ -234,7 +269,6 @@ def analyze_contact_duration(t: np.ndarray, el_deg: np.ndarray) -> dict:
         mov_med    = daily_mean.tolist()
         valid_days_w = unique_days.tolist()
 
-    # Histogram of daily mean durations
     hist_counts, hist_edges = np.histogram(daily_mean, bins=15)
 
     return {
@@ -269,10 +303,8 @@ def analyze_link_budget(elevation_data: np.ndarray,
                         coefs: list,
                         pe_label: str) -> dict:
     """
-    Calculates statistical link budget for a given exceedance probability
-    (pe_label) using Monte-Carlo samples drawn from the fitted Gamma dist.
-
-    P_R = EIRP + G_R - A_T(θ)        [dBW]
+    Calculates statistical link budget for Rx and Tx accounting for 
+    Atmospheric Loss, Path Loss (FSPL) and Polynomial Attenuations.
     """
     valid = elevation_data[elevation_data >= theta_min]
     if len(valid) == 0:
@@ -283,32 +315,67 @@ def analyze_link_budget(elevation_data: np.ndarray,
     # Monte-Carlo: 100,000 samples
     theta_mc = gamma_dist.rvs(shape, loc=loc, scale=scale, size=100_000,
                                random_state=42)
-    At_mc    = calculate_At(theta_mc, coefs)
-    Pr_mc    = EIRP + G_R - At_mc          # Received power samples [dBW]
+    
+    # Paper-based base attenuation
+    At_mc = calculate_At(theta_mc, coefs)
+    
+    # ITU Standard Loss Calculation Arrays
+    dist_mc = calculate_distance(theta_mc)
+    fspl_rx_mc = calculate_fspl(dist_mc, FREQ_RX_GHZ)
+    fspl_tx_mc = calculate_fspl(dist_mc, FREQ_TX_GHZ)
+    atmos_rx_mc = calculate_atmos(theta_mc, ATMOS_ZENITH_RX_DB)
+    atmos_tx_mc = calculate_atmos(theta_mc, ATMOS_ZENITH_TX_DB)
 
-    # Boundary cases
-    At_best  = float(calculate_At(np.array([90.0]), coefs)[0])   # zenith
-    At_worst = float(calculate_At(np.array([theta_min]), coefs)[0])  # horizon
+    # Received Power Samples [dBW]
+    Pr_rx_mc = EIRP + G_R - At_mc - fspl_rx_mc - atmos_rx_mc - MISC_LOSS_RX_DB
+    Pr_tx_mc = ES_EIRP_DBW + SAT_G_R_DBI - At_mc - fspl_tx_mc - atmos_tx_mc - MISC_LOSS_TX_DB
 
-    max_Pr   = EIRP + G_R - At_best
-    min_Pr   = EIRP + G_R - At_worst
+    # Boundary cases calculations
+    dist_best = calculate_distance(np.array([90.0]))[0]
+    dist_worst = calculate_distance(np.array([theta_min]))[0]
+
+    fspl_rx_best = calculate_fspl(dist_best, FREQ_RX_GHZ)
+    fspl_rx_worst = calculate_fspl(dist_worst, FREQ_RX_GHZ)
+    atmos_rx_best = calculate_atmos(np.array([90.0]), ATMOS_ZENITH_RX_DB)[0]
+    atmos_rx_worst = calculate_atmos(np.array([theta_min]), ATMOS_ZENITH_RX_DB)[0]
+    
+    fspl_tx_best = calculate_fspl(dist_best, FREQ_TX_GHZ)
+    fspl_tx_worst = calculate_fspl(dist_worst, FREQ_TX_GHZ)
+    atmos_tx_best = calculate_atmos(np.array([90.0]), ATMOS_ZENITH_TX_DB)[0]
+    atmos_tx_worst = calculate_atmos(np.array([theta_min]), ATMOS_ZENITH_TX_DB)[0]
+
+    At_best  = float(calculate_At(np.array([90.0]), coefs)[0])
+    At_worst = float(calculate_At(np.array([theta_min]), coefs)[0])
+
+    max_Pr   = EIRP + G_R - At_best - fspl_rx_best - atmos_rx_best - MISC_LOSS_RX_DB
+    min_Pr   = EIRP + G_R - At_worst - fspl_rx_worst - atmos_rx_worst - MISC_LOSS_RX_DB
+    
+    max_Pr_tx = ES_EIRP_DBW + SAT_G_R_DBI - At_best - fspl_tx_best - atmos_tx_best - MISC_LOSS_TX_DB
+    min_Pr_tx = ES_EIRP_DBW + SAT_G_R_DBI - At_worst - fspl_tx_worst - atmos_tx_worst - MISC_LOSS_TX_DB
 
     # Percentile array for CDF chart
     pct_points = np.arange(1, 100)
-    pct_values = np.percentile(Pr_mc, pct_points)
+    pct_values_rx = np.percentile(Pr_rx_mc, pct_points)
+    pct_values_tx = np.percentile(Pr_tx_mc, pct_points)
 
     # A_T curve vs elevation (for front-end chart)
     theta_curve = np.linspace(theta_min, 90, 200)
     At_curve    = calculate_At(theta_curve, coefs)
-
-    # Weighted A_T by occurrence frequency
     pdf_weight  = gamma_dist.pdf(theta_curve, shape, loc=loc, scale=scale)
 
     # Most frequent operating state
     hotspot_idx    = int(np.argmax(pdf_weight))
     hotspot_theta  = float(theta_curve[hotspot_idx])
     hotspot_At     = float(At_curve[hotspot_idx])
-    hotspot_Pr     = EIRP + G_R - hotspot_At
+    
+    dist_hotspot = calculate_distance(np.array([hotspot_theta]))[0]
+    fspl_rx_hotspot = calculate_fspl(dist_hotspot, FREQ_RX_GHZ)
+    atmos_rx_hotspot = calculate_atmos(np.array([hotspot_theta]), ATMOS_ZENITH_RX_DB)[0]
+    fspl_tx_hotspot = calculate_fspl(dist_hotspot, FREQ_TX_GHZ)
+    atmos_tx_hotspot = calculate_atmos(np.array([hotspot_theta]), ATMOS_ZENITH_TX_DB)[0]
+    
+    hotspot_Pr_rx = EIRP + G_R - hotspot_At - fspl_rx_hotspot - atmos_rx_hotspot - MISC_LOSS_RX_DB
+    hotspot_Pr_tx = ES_EIRP_DBW + SAT_G_R_DBI - hotspot_At - fspl_tx_hotspot - atmos_tx_hotspot - MISC_LOSS_TX_DB
 
     return {
         "exceedance_prob":             pe_label,
@@ -319,7 +386,7 @@ def analyze_link_budget(elevation_data: np.ndarray,
         "gamma_scale":                 round(float(scale), 6),
         "mean_theta_deg":              round(float(np.mean(valid)), 4),
         "std_theta_deg":               round(float(np.std(valid)),  4),
-        # ── Attenuation ───────────────────────────────────────
+        # ── Attenuation (Base from Paper) ─────────────────────
         "At_best_case_dB":             round(At_best,               4),
         "At_worst_case_dB":            round(At_worst,              4),
         "At_expected_dB":              round(float(np.mean(At_mc)), 4),
@@ -327,21 +394,46 @@ def analyze_link_budget(elevation_data: np.ndarray,
         "At_std_dB":                   round(float(np.std(At_mc)),  4),
         "hotspot_theta_deg":           round(hotspot_theta, 3),
         "hotspot_At_dB":               round(hotspot_At,    3),
-        # ── Received Power ────────────────────────────────────
+        
+        # ── Added ITU Losses (Rx - Downlink) ──────────────────
+        "FSPL_rx_expected_dB":         round(float(np.mean(fspl_rx_mc)), 4),
+        "atmos_loss_rx_expected_dB":   round(float(np.mean(atmos_rx_mc)), 4),
+        "misc_loss_rx_dB":             MISC_LOSS_RX_DB,
+        # ── Received Power (Rx - Downlink) ────────────────────
         "Pr_max_dBW":                  round(max_Pr,                          4),
         "Pr_min_dBW":                  round(min_Pr,                          4),
-        "Pr_expected_dBW":             round(float(np.mean(Pr_mc)),           4),
-        "Pr_median_dBW":               round(float(np.median(Pr_mc)),         4),
-        "Pr_std_dBW":                  round(float(np.std(Pr_mc)),            4),
-        "Pr_q1_dBW":                   round(float(np.percentile(Pr_mc, 25)), 4),
-        "Pr_q3_dBW":                   round(float(np.percentile(Pr_mc, 75)), 4),
-        "hotspot_Pr_dBW":              round(hotspot_Pr, 3),
-        # ── Link Margin ───────────────────────────────────────
+        "Pr_expected_dBW":             round(float(np.mean(Pr_rx_mc)),        4),
+        "Pr_median_dBW":               round(float(np.median(Pr_rx_mc)),      4),
+        "Pr_std_dBW":                  round(float(np.std(Pr_rx_mc)),         4),
+        "Pr_q1_dBW":                   round(float(np.percentile(Pr_rx_mc, 25)), 4),
+        "Pr_q3_dBW":                   round(float(np.percentile(Pr_rx_mc, 75)), 4),
+        "hotspot_Pr_dBW":              round(hotspot_Pr_rx, 3),
+        # ── Link Margin (Rx - Downlink) ───────────────────────
         "P_required_dBW":              P_REQ,
-        "link_margin_expected_dB":     round(float(np.mean(Pr_mc)) - P_REQ,    4),
+        "link_margin_expected_dB":     round(float(np.mean(Pr_rx_mc)) - P_REQ,    4),
         "link_margin_worst_case_dB":   round(min_Pr - P_REQ,                   4),
         "link_margin_best_case_dB":    round(max_Pr - P_REQ,                   4),
-        "link_margin_median_dB":       round(float(np.median(Pr_mc)) - P_REQ,  4),
+        "link_margin_median_dB":       round(float(np.median(Pr_rx_mc)) - P_REQ,  4),
+
+        # ── Added ITU Losses (Tx - Uplink) ────────────────────
+        "FSPL_tx_expected_dB":         round(float(np.mean(fspl_tx_mc)), 4),
+        "atmos_loss_tx_expected_dB":   round(float(np.mean(atmos_tx_mc)), 4),
+        "misc_loss_tx_dB":             MISC_LOSS_TX_DB,
+        # ── Transmitted Power (Tx - Uplink) ───────────────────
+        "Pr_tx_max_dBW":               round(max_Pr_tx, 4),
+        "Pr_tx_min_dBW":               round(min_Pr_tx, 4),
+        "Pr_tx_expected_dBW":          round(float(np.mean(Pr_tx_mc)), 4),
+        "Pr_tx_median_dBW":            round(float(np.median(Pr_tx_mc)), 4),
+        "Pr_tx_std_dBW":               round(float(np.std(Pr_tx_mc)),  4),
+        "Pr_tx_q1_dBW":                round(float(np.percentile(Pr_tx_mc, 25)), 4),
+        "Pr_tx_q3_dBW":                round(float(np.percentile(Pr_tx_mc, 75)), 4),
+        "hotspot_Pr_tx_dBW":           round(hotspot_Pr_tx, 3),
+        # ── Link Margin (Tx - Uplink) ─────────────────────────
+        "link_margin_tx_expected_dB":  round(float(np.mean(Pr_tx_mc)) - P_REQ, 4),
+        "link_margin_tx_worst_case_dB":round(min_Pr_tx - P_REQ, 4),
+        "link_margin_tx_best_case_dB": round(max_Pr_tx - P_REQ, 4),
+        "link_margin_tx_median_dB":    round(float(np.median(Pr_tx_mc)) - P_REQ, 4),
+
         # ── Chart data ────────────────────────────────────────
         "At_curve": {
             "theta_deg":       [round(v, 2) for v in theta_curve.tolist()],
@@ -350,7 +442,8 @@ def analyze_link_budget(elevation_data: np.ndarray,
         },
         "Pr_percentile_curve": {
             "percentile":      pct_points.tolist(),
-            "Pr_dBW":          [round(v, 4) for v in pct_values.tolist()],
+            "Pr_dBW":          [round(v, 4) for v in pct_values_rx.tolist()],
+            "Pr_tx_dBW":       [round(v, 4) for v in pct_values_tx.tolist()],
         },
     }
 
@@ -416,10 +509,13 @@ def export_csv(payload: dict, path: str) -> None:
                      "key": f"theta_{theta}", "value": at})
 
     # Pr percentile curve (pe=1%)
-    for pct, pr in zip(lb1["Pr_percentile_curve"]["percentile"],
-                       lb1["Pr_percentile_curve"]["Pr_dBW"]):
+    for pct, pr_rx, pr_tx in zip(lb1["Pr_percentile_curve"]["percentile"],
+                                 lb1["Pr_percentile_curve"]["Pr_dBW"],
+                                 lb1["Pr_percentile_curve"]["Pr_tx_dBW"]):
         rows.append({"section": "Pr_percentile_pe1pct",
-                     "key": f"pct_{pct}", "value": pr})
+                     "key": f"pct_{pct}", "value": pr_rx})
+        rows.append({"section": "Pr_percentile_pe1pct",
+                     "key": f"tx_pct_{pct}", "value": pr_tx})
 
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["section", "key", "value"])
@@ -484,6 +580,14 @@ def main():
             "EIRP_dBW":            EIRP,
             "G_R_dBi":             G_R,
             "P_req_dBW":           P_REQ,
+            "freq_rx_GHz":         FREQ_RX_GHZ,
+            "freq_tx_GHz":         FREQ_TX_GHZ,
+            "es_eirp_dBW":         ES_EIRP_DBW,
+            "sat_g_r_dBi":         SAT_G_R_DBI,
+            "misc_loss_rx_dB":     MISC_LOSS_RX_DB,
+            "misc_loss_tx_dB":     MISC_LOSS_TX_DB,
+            "atmos_zenith_rx_dB":  ATMOS_ZENITH_RX_DB,
+            "atmos_zenith_tx_dB":  ATMOS_ZENITH_TX_DB,
             "theta_min_1pct_deg":  THETA_MIN_1,
             "theta_min_5pct_deg":  THETA_MIN_5,
             "mu_theta":            MU_THETA,
@@ -525,13 +629,11 @@ def main():
         tag = lb["exceedance_prob"]
         print(f"\n  ─── Link Budget ({tag}) ─────────────────────")
         print(f"  Min elevation      : {lb['theta_min_deg']}°")
-        print(f"  Expected P_R       : {lb['Pr_expected_dBW']:.2f} dBW")
-        print(f"  Worst-case P_R     : {lb['Pr_min_dBW']:.2f} dBW")
-        print(f"  Best-case P_R      : {lb['Pr_max_dBW']:.2f} dBW")
-        print(f"  Link margin (exp.) : {lb['link_margin_expected_dB']:.2f} dB")
-        print(f"  Link margin (worst): {lb['link_margin_worst_case_dB']:.2f} dB")
-        print(f"  Hotspot θ / A_T    : {lb['hotspot_theta_deg']:.1f}° / "
-              f"{lb['hotspot_At_dB']:.2f} dB")
+        print(f"  Expected P_R (Rx)  : {lb['Pr_expected_dBW']:.2f} dBW")
+        print(f"  Worst-case P_R (Rx): {lb['Pr_min_dBW']:.2f} dBW")
+        print(f"  Expected P_R (Tx)  : {lb['Pr_tx_expected_dBW']:.2f} dBW")
+        print(f"  Link margin (Exp.) : {lb['link_margin_expected_dB']:.2f} dB")
+        print(f"  Hotspot θ / P_R(Rx): {lb['hotspot_theta_deg']:.1f}° / {lb['hotspot_Pr_dBW']:.2f} dBW")
 
     print("\n  Done.\n")
 
