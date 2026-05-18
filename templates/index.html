@@ -9,11 +9,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.45/dist/katex.min.css"
+        integrity="sha384-UA8juhPf75SzzAMA/4fo3yOU7sBJ0om7SCD2GHq0fZqZco6tr1UCV7nUbk9J90JM"
+        crossorigin="anonymous">
 
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://unpkg.com/@ngageoint/geopackage/dist/geopackage.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.45/dist/katex.min.js"
+        integrity="sha384-Tt7wBxLKwSzFVRET4O4U9H6v8MNaQ/CjN2FMP4xFm0ErrFu6aNqoonRVW5W40iGI"
+        crossorigin="anonymous"></script>
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/css/style.css">
@@ -183,11 +189,38 @@
             <div class="throw-button-container">
                 <div class="toolbar">
                     <div class="toggle-group">
-                        <button class="ai-chatbot-toolbar-btn" id="aiChatbotReopen" type="button" title="Open Arcturus"
-                            aria-label="Open Arcturus">
-                            <img src="/static/icons/palatine-chatbot-logo.svg" alt="">
-                            <span class="ai-chatbot-launcher-status" aria-hidden="true"></span>
-                        </button>
+                        <div class="arcturus-conversation-menu-anchor">
+                            <button class="ai-chatbot-toolbar-btn" id="aiChatbotReopen" type="button"
+                                title="Arcturus menu" aria-label="Arcturus menu" aria-haspopup="menu"
+                                aria-expanded="false" aria-controls="arcturusConversationPopover">
+                                <img src="/static/icons/palatine-chatbot-logo.svg" alt="">
+                                <span class="ai-chatbot-launcher-status" aria-hidden="true"></span>
+                            </button>
+                            <div class="arcturus-conversation-popover" id="arcturusConversationPopover" hidden>
+                                <div class="arcturus-conversation-menu" id="arcturusConversationMenu" role="menu"
+                                    aria-label="Arcturus conversations">
+                                    <button class="arcturus-conversation-menu-item" id="arcturusNewChatBtn"
+                                        type="button" role="menuitem">
+                                        <span aria-hidden="true">+</span>
+                                        <span>New Chat</span>
+                                    </button>
+                                    <button class="arcturus-conversation-menu-item" id="arcturusChatHistoryBtn"
+                                        type="button" role="menuitem">
+                                        <span aria-hidden="true">🕘</span>
+                                        <span>Chat History</span>
+                                    </button>
+                                </div>
+                                <section class="arcturus-history-panel" id="arcturusHistoryPanel"
+                                    aria-labelledby="arcturusHistoryTitle" hidden>
+                                    <div class="arcturus-history-header">
+                                        <button class="arcturus-history-back-btn" id="arcturusHistoryBackBtn"
+                                            type="button" aria-label="Back to conversation menu">‹</button>
+                                        <h2 id="arcturusHistoryTitle">Chat History</h2>
+                                    </div>
+                                    <p>Conversation history will appear here once sessions are enabled.</p>
+                                </section>
+                            </div>
+                        </div>
                         <span class="toggle-label" id="viewLabel">3d View</span>
                         <label class="switch">
                             <input type="checkbox" id="viewToggle" checked>
