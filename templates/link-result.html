@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         .sidebar {
             width: 240px;
@@ -295,6 +296,181 @@
         .btn-export:active {
             transform: scale(0.98);
         }
+
+        /* ── Analysis Content Area Styling ── */
+        .analysis-section {
+            font-family: 'Geologica', sans-serif;
+            animation: fadeInSection 0.3s ease-out;
+        }
+
+        @keyframes fadeInSection {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .coming-soon-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: #888888;
+            text-align: center;
+            border: 1px dashed #2b2b2b;
+            border-radius: 8px;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .coming-soon-placeholder h3 {
+            color: #ffffff;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .coming-soon-placeholder p {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 300;
+        }
+
+        /* Statistical Summary Title */
+        .section-title-container {
+            margin-bottom: 24px;
+        }
+
+        .section-main-title {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 6px 0;
+            letter-spacing: -0.3px;
+        }
+
+        .section-subtitle {
+            color: #888888;
+            font-size: 13px;
+            font-weight: 300;
+            margin: 0;
+        }
+
+        .metrics-category-title {
+            color: #A0A0A0;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            border-left: 2px solid #D9FF7F;
+            padding-left: 8px;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background-color: #1e1e1e;
+            border: 1px solid #2b2b2b;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 85px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-sizing: border-box;
+        }
+
+        .metric-card:hover {
+            border-color: #555555;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #888888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .metric-value-wrapper {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            color: #888888;
+            font-weight: 400;
+        }
+
+        /* ── Charts Grid Styling (Dark Mode) ── */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background-color: #1e1e1e;
+            border: 1px solid #2b2b2b;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.2s ease;
+        }
+
+        .chart-card:hover {
+            border-color: #555555;
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            height: 260px;
+            background-color: #1a1a1a;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        .chart-wrapper canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .chart-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #A0A0A0;
+            padding: 10px 14px;
+            background-color: #242424;
+            border-top: 1px solid #2b2b2b;
+            text-align: left;
+            letter-spacing: 0.3px;
+        }
     </style>
 </head>
 
@@ -371,33 +547,33 @@
             <div class="menu-top">
                 <h2>Analysis Menu</h2>
                 <ul class="menu-list">
-                    <li class="menu-item active">
+                    <li class="menu-item active" data-target="hardware-connection-section">
                         <img src="/static/icons/connection.svg" class="menu-icon" alt="">
                         Hardware Connection
                     </li>
 
                     <div class="divider"></div>
 
-                    <li class="menu-item">
+                    <li class="menu-item" data-target="statistical-summary-section">
                         <img src="/static/icons/statisticLR.svg" class="menu-icon" alt="">
                         Statistical Summary
                     </li>
-                    <li class="menu-item">
+                    <li class="menu-item" data-target="receive-transmit-section">
                         <img src="/static/icons/uploadLR.svg" class="menu-icon" alt="">
                         Receive & Transmit
                     </li>
-                    <li class="menu-item">
+                    <li class="menu-item" data-target="performance-map-section">
                         <img src="/static/icons/speedLR.svg" class="menu-icon" alt="">
                         Performance Map
                     </li>
 
                     <div class="divider"></div>
 
-                    <li class="menu-item">
+                    <li class="menu-item" data-target="free-plot-section">
                         <img src="/static/icons/freePlotLRsvg.svg" class="menu-icon" alt="">
                         Free Plot
                     </li>
-                    <li class="menu-item">
+                    <li class="menu-item" data-target="previous-run-section">
                         <img src="/static/icons/satelliteLR.svg" class="menu-icon" alt="">
                         Previous Run
                     </li>
@@ -435,8 +611,187 @@
                 </div>
             </div>
             
-            <div class="analysis-content-area" style="flex: 1; padding: 20px; overflow-y: auto;">
-                <!-- Main dynamic content/plots will go here -->
+            <div class="analysis-content-area" style="flex: 1; padding: 24px; overflow-y: auto; background-color: #141414;">
+                <!-- Hardware Connection Section -->
+                <div id="hardware-connection-section" class="analysis-section" style="display: block;">
+                    <div class="coming-soon-placeholder">
+                        <h3>Hardware Connection</h3>
+                        <p>Hardware connection visualizer is under development.</p>
+                    </div>
+                </div>
+
+                <!-- Statistical Summary Section -->
+                <div id="statistical-summary-section" class="analysis-section" style="display: none;">
+                    <div class="section-title-container">
+                        <h2 class="section-main-title">Walker-Delta Link Budget & System Configuration</h2>
+                        <p class="section-subtitle">System and simulation parameters extracted from active @mockdata.json dataset.</p>
+                    </div>
+                    
+                    <div class="metrics-category-title">Link Budget Parameters</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">EIRP</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-eirp">--</span>
+                                <span class="metric-unit">dBW</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Receiver Antenna Gain (G_R)</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-gr">--</span>
+                                <span class="metric-unit">dBi</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Required Received Power (P_req)</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-preq">--</span>
+                                <span class="metric-unit">dBW</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metrics-category-title" style="margin-top: 32px;">Orbital & Simulation Configuration</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Simulation Duration</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-sim-days">--</span>
+                                <span class="metric-unit">days</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Time Step</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-time-step">--</span>
+                                <span class="metric-unit">s</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Earth Station Latitude</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-es-lat">--</span>
+                                <span class="metric-unit">°N</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Earth Station Longitude</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-es-lon">--</span>
+                                <span class="metric-unit">°W</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Orbital Inclination</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-inclination">--</span>
+                                <span class="metric-unit">°</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Satellite Altitude</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-altitude">--</span>
+                                <span class="metric-unit">km</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Orbital Planes</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-planes">--</span>
+                                <span class="metric-unit">planes</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Satellites per Plane</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-sats-per-plane">--</span>
+                                <span class="metric-unit">sats</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Category Title -->
+                    <div class="metrics-category-title" style="margin-top: 40px;">Statistical Visualization Plots</div>
+                    
+                    <!-- Charts Grid -->
+                    <div class="charts-grid">
+                        <!-- Chart 1: PDF of Elevation Angle -->
+                        <div class="chart-card">
+                            <div class="chart-wrapper">
+                                <canvas id="chart-elevation-pdf"></canvas>
+                            </div>
+                            <div class="chart-title">Probability Density Function (PDF) of Elevation Angle (θ)</div>
+                        </div>
+
+                        <!-- Chart 2: CDF of Elevation Angle -->
+                        <div class="chart-card">
+                            <div class="chart-wrapper">
+                                <canvas id="chart-elevation-cdf"></canvas>
+                            </div>
+                            <div class="chart-title">Cumulative Distribution Function (CDF) of Elevation Angle (θ)</div>
+                        </div>
+
+                        <!-- Chart 3: Days to Mean Contact Duration -->
+                        <div class="chart-card">
+                            <div class="chart-wrapper">
+                                <canvas id="chart-days-contact"></canvas>
+                            </div>
+                            <div class="chart-title">Days vs. Mean Contact Duration</div>
+                        </div>
+
+                        <!-- Chart 4: Mean Contact Duration to Relative Frequency -->
+                        <div class="chart-card">
+                            <div class="chart-wrapper">
+                                <canvas id="chart-contact-frequency"></canvas>
+                            </div>
+                            <div class="chart-title">Mean Contact Duration vs. Relative Frequency</div>
+                        </div>
+
+                        <!-- Chart 5: Total Attenuation vs Elevation -->
+                        <div class="chart-card">
+                            <div class="chart-wrapper">
+                                <canvas id="chart-attenuation-elevation"></canvas>
+                            </div>
+                            <div class="chart-title">Total Attenuation vs. Elevation Angle</div>
+                        </div>
+
+                        <!-- Chart 6: Attenuation Weighted by Occurrence -->
+                        <div class="chart-card">
+                            <div class="chart-wrapper">
+                                <canvas id="chart-attenuation-weighted"></canvas>
+                            </div>
+                            <div class="chart-title">Total Attenuation Weighted by Occurrence Frequency</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Placeholders for other sections -->
+                <div id="receive-transmit-section" class="analysis-section" style="display: none;">
+                    <div class="coming-soon-placeholder">
+                        <h3>Receive & Transmit Analysis</h3>
+                        <p>Power flux density and link status timelines are under development.</p>
+                    </div>
+                </div>
+                <div id="performance-map-section" class="analysis-section" style="display: none;">
+                    <div class="coming-soon-placeholder">
+                        <h3>Performance Map</h3>
+                        <p>Global coverage and performance heatmaps are under development.</p>
+                    </div>
+                </div>
+                <div id="free-plot-section" class="analysis-section" style="display: none;">
+                    <div class="coming-soon-placeholder">
+                        <h3>Free Plot</h3>
+                        <p>Custom parameter query and plotting tools are under development.</p>
+                    </div>
+                </div>
+                <div id="previous-run-section" class="analysis-section" style="display: none;">
+                    <div class="coming-soon-placeholder">
+                        <h3>Previous Run</h3>
+                        <p>History of simulation runs and link budgets is under development.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -558,13 +913,376 @@
             }
         });
 
-        // Sidebar item active toggles
+        // Sidebar item active toggles & section switching
         const sidebarMenuItems = document.querySelectorAll('.sidebar .menu-item');
+        const sections = document.querySelectorAll('.analysis-content-area .analysis-section');
+
         sidebarMenuItems.forEach(item => {
             item.addEventListener('click', () => {
                 sidebarMenuItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
+
+                const targetId = item.getAttribute('data-target');
+                if (targetId) {
+                    sections.forEach(section => {
+                        if (section.id === targetId) {
+                            section.style.display = 'block';
+                        } else {
+                            section.style.display = 'none';
+                        }
+                    });
+                }
             });
+        });
+
+        // Global storage for active Chart.js instances to allow re-destruction/re-creation
+        let activeCharts = {};
+
+        // Utility to generate high-fidelity dark-mode Chart.js configs
+        function getCommonOptions(xLabel, yLabel, isPercentage = false) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: '#A0A0A0',
+                            boxWidth: 12,
+                            font: { family: 'Geologica', size: 10 }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#1E1E1E',
+                        titleColor: '#FFFFFF',
+                        bodyColor: '#A0A0A0',
+                        borderColor: '#2b2b2b',
+                        borderWidth: 1,
+                        titleFont: { family: 'Geologica', weight: 'bold' },
+                        bodyFont: { family: 'Geologica' }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: xLabel,
+                            color: '#888888',
+                            font: { family: 'Geologica', size: 10, weight: 'bold' }
+                        },
+                        grid: { color: '#2b2b2b', drawBorder: false },
+                        ticks: { color: '#888888', font: { family: 'Geologica', size: 9 } }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: yLabel,
+                            color: '#888888',
+                            font: { family: 'Geologica', size: 10, weight: 'bold' }
+                        },
+                        grid: { color: '#2b2b2b', drawBorder: false },
+                        ticks: {
+                            color: '#888888',
+                            font: { family: 'Geologica', size: 9 },
+                            callback: function(value) {
+                                return isPercentage ? (value * 100).toFixed(0) + '%' : value;
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        // Fetch Mock Data and Populate Statistical Summary Cards
+        async function loadStatisticalSummary() {
+            try {
+                const response = await fetch('/api/mockdata');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch mock data: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                const simConfig = data.simulation_config || {};
+                const lbConfig = data.link_budget_config || {};
+                
+                // Link Budget Config
+                document.getElementById('val-eirp').textContent = lbConfig.EIRP_dBW !== undefined ? lbConfig.EIRP_dBW.toFixed(1) : '--';
+                
+                // G_R_dBi handles G_R_dBi or G_R_dBI
+                const grVal = lbConfig.G_R_dBi !== undefined ? lbConfig.G_R_dBi : lbConfig.G_R_dBI;
+                document.getElementById('val-gr').textContent = grVal !== undefined ? grVal.toFixed(1) : '--';
+                
+                document.getElementById('val-preq').textContent = lbConfig.P_req_dBW !== undefined ? lbConfig.P_req_dBW.toFixed(1) : '--';
+                
+                // Simulation & Orbital Config
+                document.getElementById('val-sim-days').textContent = simConfig.simulation_days !== undefined ? simConfig.simulation_days : '--';
+                document.getElementById('val-time-step').textContent = simConfig.time_step_s !== undefined ? simConfig.time_step_s.toFixed(1) : '--';
+                document.getElementById('val-es-lat').textContent = simConfig.lat_es_deg !== undefined ? simConfig.lat_es_deg.toFixed(4) : '--';
+                document.getElementById('val-es-lon').textContent = simConfig.lon_es_deg !== undefined ? simConfig.lon_es_deg.toFixed(4) : '--';
+                document.getElementById('val-inclination').textContent = simConfig.inclination_deg !== undefined ? simConfig.inclination_deg.toFixed(1) : '--';
+                document.getElementById('val-altitude').textContent = simConfig.altitude_km !== undefined ? simConfig.altitude_km.toFixed(1) : '--';
+                document.getElementById('val-planes').textContent = simConfig.num_planes !== undefined ? simConfig.num_planes : '--';
+                document.getElementById('val-sats-per-plane').textContent = simConfig.sats_per_plane !== undefined ? simConfig.sats_per_plane : '--';
+                
+                // ── Render Charts ──
+                
+                // Chart 1: PDF of Elevation Angle (θ)
+                if (activeCharts.elevationPdf) activeCharts.elevationPdf.destroy();
+                const pdfCtx = document.getElementById('chart-elevation-pdf').getContext('2d');
+                activeCharts.elevationPdf = new Chart(pdfCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Gamma Fit (pe=1%)',
+                                data: data.gamma_fit[0].pdf_curve.theta_deg.map((x, idx) => ({ x: x, y: data.gamma_fit[0].pdf_curve.pdf[idx] })),
+                                borderColor: '#D9FF7F',
+                                backgroundColor: 'rgba(217, 255, 127, 0.05)',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                            },
+                            {
+                                label: 'Gamma Fit (pe=5%)',
+                                data: data.gamma_fit[1].pdf_curve.theta_deg.map((x, idx) => ({ x: x, y: data.gamma_fit[1].pdf_curve.pdf[idx] })),
+                                borderColor: '#00eeff',
+                                backgroundColor: 'rgba(0, 238, 255, 0.05)',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                            }
+                        ]
+                    },
+                    options: getCommonOptions('Elevation Angle θ (deg)', 'Probability Density', false)
+                });
+
+                // Chart 2: CDF of Elevation Angle (θ)
+                if (activeCharts.elevationCdf) activeCharts.elevationCdf.destroy();
+                const cdfCtx = document.getElementById('chart-elevation-cdf').getContext('2d');
+                activeCharts.elevationCdf = new Chart(cdfCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Gamma Fit (pe=1%)',
+                                data: data.gamma_fit[0].cdf_curve.theta_deg.map((x, idx) => ({ x: x, y: data.gamma_fit[0].cdf_curve.cdf[idx] })),
+                                borderColor: '#D9FF7F',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                            },
+                            {
+                                label: 'Empirical (pe=1%)',
+                                data: data.gamma_fit[0].empirical_cdf.theta_deg.map((x, idx) => ({ x: x, y: data.gamma_fit[0].empirical_cdf.ecdf[idx] })),
+                                borderColor: 'rgba(217, 255, 127, 0.4)',
+                                borderWidth: 1.5,
+                                borderDash: [4, 4],
+                                pointRadius: 0,
+                                fill: false,
+                            },
+                            {
+                                label: 'Gamma Fit (pe=5%)',
+                                data: data.gamma_fit[1].cdf_curve.theta_deg.map((x, idx) => ({ x: x, y: data.gamma_fit[1].cdf_curve.cdf[idx] })),
+                                borderColor: '#00eeff',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                            },
+                            {
+                                label: 'Empirical (pe=5%)',
+                                data: data.gamma_fit[1].empirical_cdf.theta_deg.map((x, idx) => ({ x: x, y: data.gamma_fit[1].empirical_cdf.ecdf[idx] })),
+                                borderColor: 'rgba(0, 238, 255, 0.4)',
+                                borderWidth: 1.5,
+                                borderDash: [4, 4],
+                                pointRadius: 0,
+                                fill: false,
+                            }
+                        ]
+                    },
+                    options: getCommonOptions('Elevation Angle θ (deg)', 'Cumulative Probability', false)
+                });
+
+                // Chart 3: Days vs. Mean Contact Duration (Mixed Chart)
+                if (activeCharts.daysContact) activeCharts.daysContact.destroy();
+                const daysContactCtx = document.getElementById('chart-days-contact').getContext('2d');
+                const contactData = data.contact_duration || {};
+                const dailyMean = contactData.daily_mean_duration || {};
+                
+                activeCharts.daysContact = new Chart(daysContactCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Daily Mean',
+                                data: dailyMean.day.map((d, idx) => ({ x: d, y: dailyMean.mean_s[idx] })),
+                                borderColor: 'rgba(255, 255, 255, 0.12)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                type: 'bar',
+                                barThickness: 2,
+                            },
+                            {
+                                label: '5-Day Moving Avg',
+                                data: (dailyMean.window_days || dailyMean.day).map((d, idx) => ({ x: d, y: dailyMean.moving_avg_s[idx] })),
+                                borderColor: '#D9FF7F',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                            },
+                            {
+                                label: '5-Day Moving Median',
+                                data: (dailyMean.window_days || dailyMean.day).map((d, idx) => ({ x: d, y: dailyMean.moving_med_s[idx] })),
+                                borderColor: '#ffcc00',
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                fill: false,
+                            }
+                        ]
+                    },
+                    options: getCommonOptions('Simulation Time (Days)', 'Pass Duration (Seconds)', false)
+                });
+
+                // Chart 4: Mean Contact Duration vs. Relative Frequency (Histogram)
+                if (activeCharts.contactFrequency) activeCharts.contactFrequency.destroy();
+                const freqCtx = document.getElementById('chart-contact-frequency').getContext('2d');
+                const hist = contactData.duration_histogram || {};
+                const binLabels = [];
+                for (let i = 0; i < hist.relative_freq.length; i++) {
+                    const start = hist.bin_edges_s[i];
+                    const end = hist.bin_edges_s[i+1];
+                    binLabels.push(`${start.toFixed(0)}-${end.toFixed(0)}s`);
+                }
+                
+                activeCharts.contactFrequency = new Chart(freqCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: binLabels,
+                        datasets: [
+                            {
+                                label: 'Relative Frequency',
+                                data: hist.relative_freq,
+                                backgroundColor: 'rgba(255, 107, 107, 0.65)',
+                                hoverBackgroundColor: '#ff6b6b',
+                                borderWidth: 0,
+                                borderRadius: 4,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1E1E1E',
+                                bodyColor: '#FFFFFF',
+                                font: { family: 'Geologica' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Contact Duration Bin (Seconds)',
+                                    color: '#888888',
+                                    font: { family: 'Geologica', size: 10, weight: 'bold' }
+                                },
+                                grid: { display: false },
+                                ticks: { color: '#888888', font: { family: 'Geologica', size: 9 } }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Relative Frequency',
+                                    color: '#888888',
+                                    font: { family: 'Geologica', size: 10, weight: 'bold' }
+                                },
+                                grid: { color: '#2b2b2b', drawBorder: false },
+                                ticks: {
+                                    color: '#888888',
+                                    font: { family: 'Geologica', size: 9 },
+                                    callback: function(val) { return (val * 100).toFixed(0) + '%'; }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Chart 5: Total Attenuation vs Elevation Angle
+                if (activeCharts.attenuationElevation) activeCharts.attenuationElevation.destroy();
+                const attCtx = document.getElementById('chart-attenuation-elevation').getContext('2d');
+                const lbPe1 = data.link_budget_analysis[0] || {};
+                const lbPe5 = data.link_budget_analysis[1] || {};
+                
+                activeCharts.attenuationElevation = new Chart(attCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Exceedance Prob = 1%',
+                                data: lbPe1.At_curve.theta_deg.map((theta, idx) => ({ x: theta, y: lbPe1.At_curve.At_dB[idx] })),
+                                borderColor: '#ff1744',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                            },
+                            {
+                                label: 'Exceedance Prob = 5%',
+                                data: lbPe5.At_curve.theta_deg.map((theta, idx) => ({ x: theta, y: lbPe5.At_curve.At_dB[idx] })),
+                                borderColor: '#ffcc00',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                            }
+                        ]
+                    },
+                    options: getCommonOptions('Elevation Angle θ (deg)', 'Total Attenuation A_T (dB)', false)
+                });
+
+                // Chart 6: Attenuation Weighted by Occurrence Frequency
+                if (activeCharts.attenuationWeighted) activeCharts.attenuationWeighted.destroy();
+                const weightedCtx = document.getElementById('chart-attenuation-weighted').getContext('2d');
+                
+                activeCharts.attenuationWeighted = new Chart(weightedCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Exceedance Prob = 1%',
+                                data: lbPe1.At_curve.theta_deg.map((theta, idx) => ({ x: theta, y: lbPe1.At_curve.pdf_weight[idx] })),
+                                borderColor: '#D9FF7F',
+                                backgroundColor: 'rgba(217, 255, 127, 0.05)',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                            },
+                            {
+                                label: 'Exceedance Prob = 5%',
+                                data: lbPe5.At_curve.theta_deg.map((theta, idx) => ({ x: theta, y: lbPe5.At_curve.pdf_weight[idx] })),
+                                borderColor: '#00eeff',
+                                backgroundColor: 'rgba(0, 238, 255, 0.05)',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                            }
+                        ]
+                    },
+                    options: getCommonOptions('Elevation Angle θ (deg)', 'Occurrence PDF Weight', false)
+                });
+
+            } catch (error) {
+                console.error("Error loading statistical summary data:", error);
+                const cardValues = document.querySelectorAll('#statistical-summary-section .metric-value');
+                cardValues.forEach(el => el.textContent = 'Err');
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStatisticalSummary();
         });
 
         // Navigation bar interactivity

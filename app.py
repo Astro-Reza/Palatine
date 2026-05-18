@@ -42,6 +42,19 @@ def ground_system():
 def link_result():
     return render_template('link-result.html')
 
+@app.route('/api/mockdata')
+def get_mockdata():
+    mockdata_path = os.path.join(os.path.dirname(__file__), 'arcturus', 'mockdata.json')
+    if os.path.exists(mockdata_path):
+        try:
+            with open(mockdata_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify(data)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    else:
+        return jsonify({"error": "mockdata.json not found"}), 404
+
 # ─── Legacy Constellation Endpoints (backward compat) ───
 
 @app.route('/api/save-constellation', methods=['POST'])
