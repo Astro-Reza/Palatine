@@ -541,7 +541,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, mode: aiChatMode }),
+                    body: JSON.stringify({ 
+                        prompt: text, 
+                        mode: aiChatMode,
+                        project_state: window.SessionManager ? window.SessionManager.getCurrentState() : {}
+                    }),
                     signal: controller.signal
                 });
 
@@ -603,8 +607,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reasoning) completeReasoning(reasoning);
 
                 aiState = 'success';
+                let finalText = currentMainText.trim();
+                try {
+                    const parsed = JSON.parse(finalText);
+                    if (parsed && parsed.type === 'state_update') {
+                        if (window.SessionManager && window.SessionManager.applyStateUpdate) {
+                            window.SessionManager.applyStateUpdate(parsed.updated_state);
+                        }
+                        const saveMsg = parsed.saved ? " Update saved directly to your YAML file." : " Updates applied to your session.";
+                        finalText = "✅ **Task Completed**\n" + saveMsg;
+                        responseContent.innerHTML = '';
+                        renderMarkdown(responseContent, finalText);
+                    }
+                } catch(e) {
+                    // Not JSON, keep raw markdown
+                }
                 
-                message.appendChild(createMessageActions(currentMainText.trim(), text));
+                message.appendChild(createMessageActions(finalText, text));
                 aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
                 setLauncherState('success');
                 activeRequest = null;
