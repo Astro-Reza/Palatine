@@ -298,6 +298,29 @@
         }
 
         /* ── Analysis Content Area Styling ── */
+        .analysis-content-area {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        .analysis-content-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .analysis-content-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .analysis-content-area::-webkit-scrollbar-thumb {
+            background-color: transparent;
+            border-radius: 3px;
+            transition: background-color 0.2s ease;
+        }
+
+        .analysis-content-area:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
         .analysis-section {
             font-family: 'Geologica', sans-serif;
             animation: fadeInSection 0.3s ease-out;
@@ -338,52 +361,58 @@
 
         /* Statistical Summary Title */
         .section-title-container {
-            margin-bottom: 24px;
+            margin-bottom: 14px;
         }
 
         .section-main-title {
             color: #ffffff;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            margin: 0 0 6px 0;
+            margin: 0;
             letter-spacing: -0.3px;
         }
 
         .section-subtitle {
             color: #888888;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 300;
             margin: 0;
         }
 
         .metrics-category-title {
-            color: #A0A0A0;
-            font-size: 11px;
+            display: flex;
+            align-items: center;
+            color: #ffffff;
+            font-size: 12px;
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            border-left: 2px solid #D9FF7F;
-            padding-left: 8px;
+            margin-bottom: 6px;
+        }
+
+        .metrics-category-title::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background-color: #2b2b2b;
+            margin-left: 12px;
         }
 
         /* Metrics Grid */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
         .metric-card {
             background-color: #1e1e1e;
-            border: 1px solid #2b2b2b;
-            border-radius: 8px;
-            padding: 16px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 10px 12px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 85px;
+            min-height: 62px;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             box-sizing: border-box;
         }
@@ -393,29 +422,29 @@
         }
 
         .metric-label {
-            font-size: 11px;
+            font-size: 10px;
             color: #888888;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .metric-value-wrapper {
             display: flex;
             align-items: baseline;
-            gap: 4px;
+            gap: 3px;
         }
 
         .metric-value {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 700;
             color: #ffffff;
             font-variant-numeric: tabular-nums;
         }
 
         .metric-unit {
-            font-size: 12px;
+            font-size: 11px;
             color: #888888;
             font-weight: 400;
         }
@@ -424,8 +453,8 @@
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin-top: 24px;
+            gap: 10px;
+            margin-top: 14px;
         }
 
         @media (max-width: 1024px) {
@@ -436,8 +465,8 @@
 
         .chart-card {
             background-color: #1e1e1e;
-            border: 1px solid #2b2b2b;
-            border-radius: 8px;
+            border: 1px solid transparent;
+            border-radius: 6px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -450,9 +479,9 @@
 
         .chart-wrapper {
             width: 100%;
-            height: 260px;
+            height: 200px;
             background-color: #1a1a1a;
-            padding: 16px;
+            padding: 10px;
             box-sizing: border-box;
         }
 
@@ -462,14 +491,442 @@
         }
 
         .chart-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: #A0A0A0;
-            padding: 10px 14px;
+            padding: 6px 12px;
             background-color: #242424;
             border-top: 1px solid #2b2b2b;
             text-align: left;
             letter-spacing: 0.3px;
+        }
+
+        /* --- LINK BUDGET WATERFALL CSS --- */
+        .link-budget-wrapper {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            background: #1e1e1e;
+            border: 1px solid #2b2b2b;
+            padding: 10px 20px;
+            border-radius: 8px;
+            position: relative;
+            width: 100%;
+            margin-bottom: 16px;
+            margin-top: 10px;
+            box-sizing: border-box;
+            color: #ffffff;
+            font-family: 'Geologica', sans-serif;
+        }
+
+        /* --- SIDE LABELS --- */
+        .lb-label-text {
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            z-index: 2;
+            color: #888888;
+        }
+
+        .lb-label-sat {
+            margin-right: 12px;
+        }
+
+        .lb-label-gnd {
+            margin-left: 12px;
+            text-align: right;
+        }
+
+        /* --- CHART TRACK --- */
+        .lb-chart-track {
+            position: relative;
+            display: flex;
+            align-items: center;
+            height: 280px;
+            padding: 0 5px;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .lb-chart-track::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.15);
+            z-index: 0;
+        }
+
+        /* --- SIGNAL NOISE WAVE --- */
+        .lb-signal-container {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            transform: translateY(-50%);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+
+        .lb-signal-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 100%;
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            animation: scrollSignalRight 8s linear infinite;
+        }
+
+        @keyframes scrollSignalRight {
+            0% {
+                transform: translateX(-50%);
+            }
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        /* --- COMPONENTS --- */
+        .lb-c-shape {
+            width: 25px;
+            height: 60px;
+            border: 3px solid #555555;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 2;
+            flex-shrink: 0;
+            background-color: #1e1e1e;
+        }
+
+        .lb-c-sat {
+            border-right: none;
+            border-radius: 100px 0 0 100px;
+            margin-right: 6px;
+        }
+
+        .lb-c-gnd {
+            border-left: none;
+            border-radius: 0 100px 100px 0;
+            margin-right: 6px;
+            margin-left: 6px;
+        }
+
+        .lb-bar-column {
+            position: relative;
+            width: 50px;
+            height: 100%;
+            margin-right: 6px;
+            pointer-events: none;
+            flex: 1;
+        }
+
+        .lb-candle {
+            position: absolute;
+            width: 100%;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            pointer-events: auto;
+            border-radius: 4px;
+        }
+
+        .lb-candle:hover {
+            transform: scale(1.05, 1.05) !important;
+            z-index: 10;
+            filter: brightness(1.2);
+        }
+
+        /* Labels */
+        .lb-label-top {
+            position: absolute;
+            top: 15px;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #888888;
+            letter-spacing: 0.5px;
+            line-height: 1.1;
+        }
+
+        .lb-label-value {
+            font-size: 10px;
+            font-weight: 800;
+            color: #111111;
+            background-color: #ffffff;
+            padding: 2px 5px;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+            white-space: nowrap;
+            display: inline-block;
+            font-family: 'Geologica', sans-serif;
+            pointer-events: none; /* Pass hover events through to the parent candle */
+        }
+
+        /* Bar Colors & Positions */
+        .lb-candle.eirp, .lb-candle.rx {
+            background: #00e676;
+        }
+
+        .lb-candle.path, .lb-candle.atmos, .lb-candle.misc {
+            background: #ff1744;
+        }
+
+        .lb-candle.result {
+            background: #00e5ff;
+        }
+
+        /* ══════════════════════════════════════════
+           FREE PLOT STYLES
+        ══════════════════════════════════════════ */
+
+        /* Toolbar */
+        .fp-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        .fp-toolbar-left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .fp-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* Layout toggle */
+        .fp-layout-toggle {
+            display: flex;
+            background: #1e1e1e;
+            border: 1px solid #2b2b2b;
+            border-radius: 6px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .fp-layout-btn {
+            background: transparent;
+            border: none;
+            color: #555;
+            cursor: pointer;
+            padding: 4px 7px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .fp-layout-btn:hover { color: #888; }
+
+        .fp-layout-btn.active {
+            background: #2e2e2e;
+            color: #ffffff;
+        }
+
+        /* Add Plot button */
+        .fp-add-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #D9FF7F;
+            color: #111111;
+            border: none;
+            border-radius: 6px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 400;
+            font-family: 'Geologica', sans-serif;
+            cursor: pointer;
+            transition: all 0.18s;
+            letter-spacing: 0.3px;
+        }
+
+        .fp-add-btn:hover {
+            background: #c8ee6a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(217, 255, 127, 0.2);
+        }
+
+        .fp-add-btn:active { transform: translateY(0); }
+
+        /* Plot grid */
+        .fp-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .fp-grid.cols-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        /* Plot card */
+        .fp-card {
+            background: #1a1a1a;
+            border: 1px solid #2b2b2b;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.2s;
+            animation: fadeInSection 0.25s ease-out;
+        }
+
+        .fp-card:hover { border-color: #3a3a3a; }
+
+        /* Card header */
+        .fp-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid #222;
+            flex-wrap: wrap;
+        }
+
+        .fp-card-title-input {
+            flex: 1;
+            min-width: 120px;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: 'Geologica', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 0;
+            outline: none;
+        }
+
+        .fp-card-title-input::placeholder { color: #444; }
+
+        .fp-card-title-input:focus {
+            border-bottom: 1px solid #555;
+        }
+
+        /* Axis selectors */
+        .fp-axis-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .fp-axis-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #555;
+        }
+
+        .fp-select {
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #ccc;
+            font-family: 'Geologica', sans-serif;
+            font-size: 10px;
+            padding: 4px 8px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.15s;
+            max-width: 180px;
+        }
+
+        .fp-select:hover, .fp-select:focus { border-color: #555; color: #fff; }
+
+        /* Chart type tabs */
+        .fp-type-tabs {
+            display: flex;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .fp-type-tab {
+            background: transparent;
+            border: none;
+            color: #555;
+            cursor: pointer;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-family: 'Geologica', sans-serif;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+        }
+
+        .fp-type-tab:hover { color: #888; }
+
+        .fp-type-tab.active {
+            background: #333;
+            color: #fff;
+        }
+
+        /* Remove button */
+        .fp-remove-btn {
+            background: transparent;
+            border: 1px solid #2b2b2b;
+            border-radius: 5px;
+            color: #444;
+            cursor: pointer;
+            padding: 4px 7px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .fp-remove-btn:hover {
+            border-color: #ff1744;
+            color: #ff1744;
+            background: rgba(255, 23, 68, 0.06);
+        }
+
+        /* Canvas wrapper */
+        .fp-canvas-wrapper {
+            position: relative;
+            padding: 12px 14px 10px;
+            height: 260px;
+        }
+
+        /* Empty state */
+        .fp-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+            border: 1px dashed #222;
+            border-radius: 10px;
+            text-align: center;
         }
     </style>
 </head>
@@ -611,7 +1068,7 @@
                 </div>
             </div>
             
-            <div class="analysis-content-area" style="flex: 1; padding: 24px; overflow-y: auto; background-color: #141414;">
+            <div class="analysis-content-area" style="flex: 1; padding: 16px; overflow-y: auto; background-color: #141414;">
                 <!-- Hardware Connection Section -->
                 <div id="hardware-connection-section" class="analysis-section" style="display: block;">
                     <div class="coming-soon-placeholder">
@@ -622,9 +1079,18 @@
 
                 <!-- Statistical Summary Section -->
                 <div id="statistical-summary-section" class="analysis-section" style="display: none;">
-                    <div class="section-title-container">
-                        <h2 class="section-main-title">Walker-Delta Link Budget & System Configuration</h2>
-                        <p class="section-subtitle">System and simulation parameters extracted from active @mockdata.json dataset.</p>
+                    <div class="section-title-container" style="margin-bottom: 16px;">
+                        <h2 class="section-main-title" style="font-size: 18px;">Statistical Summary</h2>
+                        <div class="section-top-stats" style="display: flex; gap: 32px; margin-top: 8px; align-items: baseline;">
+                            <div class="top-stat-item" style="display: flex; align-items: baseline; gap: 6px;">
+                                <span id="val-sim-days" style="font-size: 24px; font-weight: 700; color: #ffffff; font-variant-numeric: tabular-nums;">--</span>
+                                <span style="font-size: 11px; color: #888888; font-weight: 400; text-transform: uppercase; letter-spacing: 0.5px;">days</span>
+                            </div>
+                            <div class="top-stat-item" style="display: flex; align-items: baseline; gap: 6px; border-left: 1px solid #2b2b2b; padding-left: 32px;">
+                                <span id="val-time-step" style="font-size: 24px; font-weight: 700; color: #ffffff; font-variant-numeric: tabular-nums;">--</span>
+                                <span style="font-size: 11px; color: #888888; font-weight: 400; text-transform: uppercase; letter-spacing: 0.5px;">s</span>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="metrics-category-title">Link Budget Parameters</div>
@@ -652,22 +1118,8 @@
                         </div>
                     </div>
 
-                    <div class="metrics-category-title" style="margin-top: 32px;">Orbital & Simulation Configuration</div>
+                    <div class="metrics-category-title" style="margin-top: 16px;">Orbital & Simulation Configuration</div>
                     <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-label">Simulation Duration</div>
-                            <div class="metric-value-wrapper">
-                                <span class="metric-value" id="val-sim-days">--</span>
-                                <span class="metric-unit">days</span>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-label">Time Step</div>
-                            <div class="metric-value-wrapper">
-                                <span class="metric-value" id="val-time-step">--</span>
-                                <span class="metric-unit">s</span>
-                            </div>
-                        </div>
                         <div class="metric-card">
                             <div class="metric-label">Earth Station Latitude</div>
                             <div class="metric-value-wrapper">
@@ -713,7 +1165,7 @@
                     </div>
 
                     <!-- Charts Category Title -->
-                    <div class="metrics-category-title" style="margin-top: 40px;">Statistical Visualization Plots</div>
+                    <div class="metrics-category-title" style="margin-top: 20px;">Statistical Visualization Plots</div>
                     
                     <!-- Charts Grid -->
                     <div class="charts-grid">
@@ -769,9 +1221,214 @@
 
                 <!-- Placeholders for other sections -->
                 <div id="receive-transmit-section" class="analysis-section" style="display: none;">
-                    <div class="coming-soon-placeholder">
-                        <h3>Receive & Transmit Analysis</h3>
-                        <p>Power flux density and link status timelines are under development.</p>
+                    <!-- Transmit (Uplink) Section -->
+                    <div class="section-title-container" style="margin-bottom: 16px;">
+                        <h2 class="section-main-title" style="font-size: 18px;">Transmit</h2>
+                        <span class="section-subtitle">Ground station transmission to satellite receiver</span>
+                    </div>
+
+                    <div class="metrics-category-title">Link Budget Parameters</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Received Power</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-tx-pr">--</span>
+                                <span class="metric-unit">dBW</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Link Margin</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-tx-margin">--</span>
+                                <span class="metric-unit">dB</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Free Space Path Loss</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-tx-fspl">--</span>
+                                <span class="metric-unit">dB</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Atmospheric Loss</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-tx-atmos">--</span>
+                                <span class="metric-unit">dB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transmit Waterfall Chart -->
+                    <div class="link-budget-wrapper">
+                        <div class="lb-label-text lb-label-sat">GROUND</div>
+                        <div class="lb-chart-track" id="lb-track-tx">
+                            <div class="lb-signal-container">
+                                <svg class="lb-signal-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                                    <path d="M0,50 L10,45 L20,55 L30,48 L40,52 L50,40 L60,60 L70,45 L80,55 L90,50 
+                                             L100,50 L110,42 L120,58 L130,48 L140,52 L150,35 L160,65 L170,48 L180,52 L190,50 
+                                             L200,50 L210,55 L220,45 L230,52 L240,48 L250,30 L260,70 L270,45 L280,55 L290,50 
+                                             L300,50 L310,48 L320,52 L330,45 L340,55 L350,40 L360,60 L370,52 L380,48 L390,50 
+                                             L400,50 L410,55 L420,45 L430,58 L440,42 L450,35 L460,65 L470,50 L480,50 L490,50 
+                                             L500,50 L510,45 L520,55 L530,48 L540,52 L550,40 L560,60 L570,45 L580,55 L590,50 
+                                             L600,50 L610,42 L620,58 L630,48 L640,52 L650,35 L660,65 L670,48 L680,52 L690,50 
+                                             L700,50 L710,55 L720,45 L730,52 L740,48 L750,30 L760,70 L770,45 L780,55 L790,50 
+                                             L800,50 L810,48 L820,52 L830,45 L840,55 L850,40 L860,60 L870,52 L880,48 L890,50 
+                                             L900,50 L910,55 L920,45 L930,58 L940,42 L950,35 L960,65 L970,50 L980,50 L990,50 L1000,50" />
+                                </svg>
+                            </div>
+                            <div class="lb-c-shape lb-c-sat"></div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Tx EIRP</div>
+                                <div class="lb-candle eirp" id="tx-candle-eirp">
+                                    <span class="lb-label-value" id="lb-tx-val-eirp">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Path Loss</div>
+                                <div class="lb-candle path" id="tx-candle-path">
+                                    <span class="lb-label-value" id="lb-tx-val-path">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Atmos Loss</div>
+                                <div class="lb-candle atmos" id="tx-candle-atmos">
+                                    <span class="lb-label-value" id="lb-tx-val-atmos">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-c-shape lb-c-gnd"></div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Rx Gain</div>
+                                <div class="lb-candle rx" id="tx-candle-rx">
+                                    <span class="lb-label-value" id="lb-tx-val-gain">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Misc Loss</div>
+                                <div class="lb-candle misc" id="tx-candle-misc">
+                                    <span class="lb-label-value" id="lb-tx-val-misc">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Received Power</div>
+                                <div class="lb-candle result" id="tx-candle-result">
+                                    <span class="lb-label-value" id="lb-tx-val-pr">--</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lb-label-text lb-label-gnd">SATELLITE</div>
+                    </div>
+
+                    <!-- Receive (Downlink) Section -->
+                    <div class="section-title-container" style="margin-top: 32px; margin-bottom: 16px;">
+                        <h2 class="section-main-title" style="font-size: 18px;">Receive</h2>
+                        <span class="section-subtitle">Satellite transmission to ground station receiver</span>
+                    </div>
+
+                    <div class="metrics-category-title">Link Budget Parameters</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Received Power</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-rx-pr">--</span>
+                                <span class="metric-unit">dBW</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Link Margin</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-rx-margin">--</span>
+                                <span class="metric-unit">dB</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Free Space Path Loss</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-rx-fspl">--</span>
+                                <span class="metric-unit">dB</span>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Expected Atmospheric Loss</div>
+                            <div class="metric-value-wrapper">
+                                <span class="metric-value" id="val-rx-atmos">--</span>
+                                <span class="metric-unit">dB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Receive Waterfall Chart -->
+                    <div class="link-budget-wrapper">
+                        <div class="lb-label-text lb-label-sat">SATELLITE</div>
+                        <div class="lb-chart-track" id="lb-track-rx">
+                            <div class="lb-signal-container">
+                                <svg class="lb-signal-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                                    <path d="M0,50 L10,45 L20,55 L30,48 L40,52 L50,40 L60,60 L70,45 L80,55 L90,50 
+                                             L100,50 L110,42 L120,58 L130,48 L140,52 L150,35 L160,65 L170,48 L180,52 L190,50 
+                                             L200,50 L210,55 L220,45 L230,52 L240,48 L250,30 L260,70 L270,45 L280,55 L290,50 
+                                             L300,50 L310,48 L320,52 L330,45 L340,55 L350,40 L360,60 L370,52 L380,48 L390,50 
+                                             L400,50 L410,55 L420,45 L430,58 L440,42 L450,35 L460,65 L470,50 L480,50 L490,50 
+                                             L500,50 L510,45 L520,55 L530,48 L540,52 L550,40 L560,60 L570,45 L580,55 L590,50 
+                                             L600,50 L610,42 L620,58 L630,48 L640,52 L650,35 L660,65 L670,48 L680,52 L690,50 
+                                             L700,50 L710,55 L720,45 L730,52 L740,48 L750,30 L760,70 L770,45 L780,55 L790,50 
+                                             L800,50 L810,48 L820,52 L830,45 L840,55 L850,40 L860,60 L870,52 L880,48 L890,50 
+                                             L900,50 L910,55 L920,45 L930,58 L940,42 L950,35 L960,65 L970,50 L980,50 L990,50 L1000,50" />
+                                </svg>
+                            </div>
+                            <div class="lb-c-shape lb-c-sat"></div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Tx EIRP</div>
+                                <div class="lb-candle eirp" id="rx-candle-eirp">
+                                    <span class="lb-label-value" id="lb-rx-val-eirp">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Path Loss</div>
+                                <div class="lb-candle path" id="rx-candle-path">
+                                    <span class="lb-label-value" id="lb-rx-val-path">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Atmos Loss</div>
+                                <div class="lb-candle atmos" id="rx-candle-atmos">
+                                    <span class="lb-label-value" id="lb-rx-val-atmos">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-c-shape lb-c-gnd"></div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Rx Gain</div>
+                                <div class="lb-candle rx" id="rx-candle-rx">
+                                    <span class="lb-label-value" id="lb-rx-val-gain">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Misc Loss</div>
+                                <div class="lb-candle misc" id="rx-candle-misc">
+                                    <span class="lb-label-value" id="lb-rx-val-misc">--</span>
+                                </div>
+                            </div>
+
+                            <div class="lb-bar-column">
+                                <div class="lb-label-top">Received Power</div>
+                                <div class="lb-candle result" id="rx-candle-result">
+                                    <span class="lb-label-value" id="lb-rx-val-pr">--</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lb-label-text lb-label-gnd">GROUND</div>
                     </div>
                 </div>
                 <div id="performance-map-section" class="analysis-section" style="display: none;">
@@ -781,10 +1438,47 @@
                     </div>
                 </div>
                 <div id="free-plot-section" class="analysis-section" style="display: none;">
-                    <div class="coming-soon-placeholder">
-                        <h3>Free Plot</h3>
-                        <p>Custom parameter query and plotting tools are under development.</p>
+
+                    <!-- ── Free Plot Toolbar ── -->
+                    <div class="fp-toolbar">
+                        <div class="fp-toolbar-left">
+                            <h2 class="section-main-title" style="font-size: 16px; margin: 0;">Free Plot</h2>
+                            <span class="section-subtitle">Select data arrays to visualize custom relationships</span>
+                        </div>
+                        <div class="fp-toolbar-right">
+                            <div class="fp-layout-toggle" id="fpLayoutToggle" title="Toggle grid layout">
+                                <button class="fp-layout-btn active" data-cols="1" title="Single column">
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/></svg>
+                                </button>
+                                <button class="fp-layout-btn" data-cols="2" title="Two columns">
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="1" width="5" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                                </button>
+                            </div>
+                            <button class="fp-add-btn" id="fpAddPlotBtn">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1V13M1 7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                Add Plot
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- ── Plot Cards Grid ── -->
+                    <div class="fp-grid" id="fpGrid">
+                        <!-- Plot cards injected here by JS -->
+                    </div>
+
+                    <!-- ── Empty State ── -->
+                    <div class="fp-empty-state" id="fpEmptyState">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="opacity:0.25; margin-bottom:16px;">
+                            <rect x="4" y="28" width="8" height="16" rx="2" fill="white"/>
+                            <rect x="16" y="18" width="8" height="26" rx="2" fill="white"/>
+                            <rect x="28" y="10" width="8" height="34" rx="2" fill="white"/>
+                            <rect x="40" y="20" width="8" height="24" rx="2" fill="white"/>
+                            <path d="M4 8L44 8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 3"/>
+                        </svg>
+                        <p style="color:#555; font-size:13px; font-weight:500; margin:0 0 6px;">No plots yet</p>
+                        <p style="color:#3a3a3a; font-size:11px; margin:0;">Click <strong style="color:#666">Add Plot</strong> to start building your custom visualization</p>
+                    </div>
+
                 </div>
                 <div id="previous-run-section" class="analysis-section" style="display: none;">
                     <div class="coming-soon-placeholder">
@@ -1273,10 +1967,163 @@
                     options: getCommonOptions('Elevation Angle θ (deg)', 'Occurrence PDF Weight', false)
                 });
 
+                // ─── Update Receive & Transmit Section ───
+                const lbAnalysis = data.link_budget_analysis ? data.link_budget_analysis[0] : {};
+                
+                // Transmit Metrics Cards
+                const txPr = lbAnalysis.Pr_tx_expected_dBW;
+                const txMargin = lbAnalysis.link_margin_tx_expected_dB;
+                const txFspl = lbAnalysis.FSPL_tx_expected_dB;
+                const txAtmos = lbAnalysis.atmos_loss_tx_expected_dB;
+                
+                const setVal = (id, val, decimals = 1, suffix = '') => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.textContent = typeof val === 'number' ? val.toFixed(decimals) + suffix : '--';
+                        if (id.includes('margin')) {
+                            el.className = 'metric-value';
+                            el.classList.add(val >= 0 ? 'positive' : 'negative');
+                        }
+                    }
+                };
+                
+                setVal('val-tx-pr', txPr);
+                setVal('val-tx-margin', txMargin);
+                setVal('val-tx-fspl', txFspl);
+                setVal('val-tx-atmos', txAtmos);
+                
+                // Receive Metrics Cards
+                const rxPr = lbAnalysis.Pr_expected_dBW;
+                const rxMargin = lbAnalysis.link_margin_expected_dB;
+                const rxFspl = lbAnalysis.FSPL_rx_expected_dB;
+                const rxAtmos = lbAnalysis.atmos_loss_rx_expected_dB;
+                
+                setVal('val-rx-pr', rxPr);
+                setVal('val-rx-margin', rxMargin);
+                setVal('val-rx-fspl', rxFspl);
+                setVal('val-rx-atmos', rxAtmos);
+                
+                // Waterfall Values
+                const txValues = {
+                    eirp: lbConfig.es_eirp_dBW || 60.0,
+                    path: -(txFspl || 187.38),
+                    atmos: -(txAtmos || 2.73),
+                    rx: lbConfig.sat_g_r_dBi || 35.0,
+                    misc: -(lbConfig.misc_loss_tx_dB || 2.0),
+                    result: txPr || -290.18
+                };
+                
+                const rxValues = {
+                    eirp: lbConfig.EIRP_dBW || 56.0,
+                    path: -(rxFspl || 183.86),
+                    atmos: -(rxAtmos || 1.70),
+                    rx: lbConfig.G_R_dBi || 40.0,
+                    misc: -(lbConfig.misc_loss_rx_dB || 2.0),
+                    result: rxPr || -284.63
+                };
+                
+                // Update text displays in waterfalls
+                document.getElementById('lb-tx-val-eirp').textContent = `+${txValues.eirp.toFixed(1)}`;
+                document.getElementById('lb-tx-val-path').textContent = `${txValues.path.toFixed(1)}`;
+                document.getElementById('lb-tx-val-atmos').textContent = `${txValues.atmos.toFixed(1)}`;
+                document.getElementById('lb-tx-val-gain').textContent = `+${txValues.rx.toFixed(1)}`;
+                document.getElementById('lb-tx-val-misc').textContent = `${txValues.misc.toFixed(1)}`;
+                document.getElementById('lb-tx-val-pr').textContent = txValues.result.toFixed(1);
+                
+                document.getElementById('lb-rx-val-eirp').textContent = `+${rxValues.eirp.toFixed(1)}`;
+                document.getElementById('lb-rx-val-path').textContent = `${rxValues.path.toFixed(1)}`;
+                document.getElementById('lb-rx-val-atmos').textContent = `${rxValues.atmos.toFixed(1)}`;
+                document.getElementById('lb-rx-val-gain').textContent = `+${rxValues.rx.toFixed(1)}`;
+                document.getElementById('lb-rx-val-misc').textContent = `${rxValues.misc.toFixed(1)}`;
+                document.getElementById('lb-rx-val-pr').textContent = rxValues.result.toFixed(1);
+                
+                // Draw dynamic waterfalls
+                drawDynamicWaterfall('tx', txValues);
+                drawDynamicWaterfall('rx', rxValues);
+
             } catch (error) {
                 console.error("Error loading statistical summary data:", error);
-                const cardValues = document.querySelectorAll('#statistical-summary-section .metric-value');
+                const cardValues = document.querySelectorAll('#statistical-summary-section .metric-value, #receive-transmit-section .metric-value');
                 cardValues.forEach(el => el.textContent = 'Err');
+            }
+        }
+
+        // Helper to draw mathematically perfect waterfall diagram scaled dynamically to fit 280px track
+        function drawDynamicWaterfall(prefix, values) {
+            // Find max deviation to scale perfectly within 280px track (140px center)
+            const maxVal = Math.max(
+                Math.abs(values.eirp),
+                Math.abs(values.eirp + values.path),
+                Math.abs(values.eirp + values.path + values.atmos),
+                Math.abs(values.eirp + values.path + values.atmos + values.rx),
+                Math.abs(values.eirp + values.path + values.atmos + values.rx + values.misc),
+                Math.abs(values.result)
+            );
+            
+            // Limit scale so maximum candle reaches 120px from the center (140px centerline)
+            const scale = maxVal > 0 ? 120 / maxVal : 0.4;
+            
+            // EIRP (starts at center line, goes UP)
+            const eirpHeight = Math.abs(values.eirp) * scale;
+            const eirpTop = 140 - eirpHeight;
+            const eirpCandle = document.getElementById(`${prefix}-candle-eirp`);
+            if (eirpCandle) {
+                eirpCandle.style.top = `${eirpTop}px`;
+                eirpCandle.style.height = `${eirpHeight}px`;
+                eirpCandle.style.transformOrigin = 'bottom';
+            }
+            
+            // Path Loss (starts at EIRP peak, goes DOWN)
+            const pathHeight = Math.abs(values.path) * scale;
+            const pathTop = 140 - (values.eirp * scale);
+            const pathCandle = document.getElementById(`${prefix}-candle-path`);
+            if (pathCandle) {
+                pathCandle.style.top = `${pathTop}px`;
+                pathCandle.style.height = `${pathHeight}px`;
+                pathCandle.style.transformOrigin = 'top';
+            }
+            
+            // Atmos Loss (starts at Path Loss bottom, goes DOWN)
+            const atmosHeight = Math.abs(values.atmos) * scale;
+            const accumAfterPath = values.eirp + values.path;
+            const atmosTop = 140 - (accumAfterPath * scale);
+            const atmosCandle = document.getElementById(`${prefix}-candle-atmos`);
+            if (atmosCandle) {
+                atmosCandle.style.top = `${atmosTop}px`;
+                atmosCandle.style.height = `${atmosHeight}px`;
+                atmosCandle.style.transformOrigin = 'top';
+            }
+            
+            // Rx Gain (starts at Atmos Loss bottom, goes UP)
+            const rxHeight = Math.abs(values.rx) * scale;
+            const accumAfterAtmos = accumAfterPath + values.atmos;
+            const accumAfterRx = accumAfterAtmos + values.rx;
+            const rxTop = 140 - (accumAfterRx * scale);
+            const rxCandle = document.getElementById(`${prefix}-candle-rx`);
+            if (rxCandle) {
+                rxCandle.style.top = `${rxTop}px`;
+                rxCandle.style.height = `${rxHeight}px`;
+                rxCandle.style.transformOrigin = 'bottom';
+            }
+            
+            // Misc Loss (starts at Rx Gain peak, goes DOWN)
+            const miscHeight = Math.abs(values.misc) * scale;
+            const miscTop = 140 - (accumAfterRx * scale);
+            const miscCandle = document.getElementById(`${prefix}-candle-misc`);
+            if (miscCandle) {
+                miscCandle.style.top = `${miscTop}px`;
+                miscCandle.style.height = `${miscHeight}px`;
+                miscCandle.style.transformOrigin = 'top';
+            }
+            
+            // Received Power (starts at center line, goes DOWN to final value)
+            const resultHeight = Math.abs(values.result) * scale;
+            const resultTop = 140;
+            const resultCandle = document.getElementById(`${prefix}-candle-result`);
+            if (resultCandle) {
+                resultCandle.style.top = `${resultTop}px`;
+                resultCandle.style.height = `${resultHeight}px`;
+                resultCandle.style.transformOrigin = 'top';
             }
         }
 
@@ -1355,6 +2202,384 @@
                 window.SessionManager.initSession();
             }
         });
+
+        // ══════════════════════════════════════════
+        // FREE PLOT ENGINE
+        // ══════════════════════════════════════════
+
+        // Catalogue of all plottable data series extracted from mockdata.
+        // Each entry: { id, label, unit, path: fn(data) => { x:[], y:[] } }
+        const FP_SERIES_CATALOGUE = [
+            // ── Elevation PDF / CDF (pe=1%) ──
+            {
+                id: 'elv_pdf_pe1',
+                label: 'Elevation PDF (pe=1%)',
+                unit: 'Probability Density',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.gamma_fit[0].pdf_curve.theta_deg,
+                    y: d.gamma_fit[0].pdf_curve.pdf
+                })
+            },
+            {
+                id: 'elv_cdf_gamma_pe1',
+                label: 'Elevation CDF — Gamma Fit (pe=1%)',
+                unit: 'Cumulative Probability',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.gamma_fit[0].cdf_curve.theta_deg,
+                    y: d.gamma_fit[0].cdf_curve.cdf
+                })
+            },
+            {
+                id: 'elv_cdf_emp_pe1',
+                label: 'Elevation CDF — Empirical (pe=1%)',
+                unit: 'Cumulative Probability',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.gamma_fit[0].empirical_cdf.theta_deg,
+                    y: d.gamma_fit[0].empirical_cdf.ecdf
+                })
+            },
+            // ── Elevation PDF / CDF (pe=5%) ──
+            {
+                id: 'elv_pdf_pe5',
+                label: 'Elevation PDF (pe=5%)',
+                unit: 'Probability Density',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.gamma_fit[1].pdf_curve.theta_deg,
+                    y: d.gamma_fit[1].pdf_curve.pdf
+                })
+            },
+            {
+                id: 'elv_cdf_gamma_pe5',
+                label: 'Elevation CDF — Gamma Fit (pe=5%)',
+                unit: 'Cumulative Probability',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.gamma_fit[1].cdf_curve.theta_deg,
+                    y: d.gamma_fit[1].cdf_curve.cdf
+                })
+            },
+            {
+                id: 'elv_cdf_emp_pe5',
+                label: 'Elevation CDF — Empirical (pe=5%)',
+                unit: 'Cumulative Probability',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.gamma_fit[1].empirical_cdf.theta_deg,
+                    y: d.gamma_fit[1].empirical_cdf.ecdf
+                })
+            },
+            // ── Total Attenuation curve (pe=1%) ──
+            {
+                id: 'at_curve_pe1',
+                label: 'Total Attenuation vs. Elevation (pe=1%)',
+                unit: 'Attenuation (dB)',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.link_budget_analysis[0].At_curve.theta_deg,
+                    y: d.link_budget_analysis[0].At_curve.At_dB
+                })
+            },
+            // ── Downlink Received Power curve (pe=1%) ──
+            {
+                id: 'pr_curve_pe1',
+                label: 'Rx Received Power vs. Elevation (pe=1%)',
+                unit: 'Received Power (dBW)',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.link_budget_analysis[0].At_curve.theta_deg,
+                    y: d.link_budget_analysis[0].At_curve.Pr_dBW
+                })
+            },
+            // ── Uplink Received Power curve (pe=1%) ──
+            {
+                id: 'pr_tx_curve_pe1',
+                label: 'Tx Received Power vs. Elevation (pe=1%)',
+                unit: 'Received Power (dBW)',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.link_budget_analysis[0].At_curve.theta_deg,
+                    y: d.link_budget_analysis[0].At_curve.Pr_tx_dBW
+                })
+            },
+            // ── Total Attenuation curve (pe=5%) ──
+            {
+                id: 'at_curve_pe5',
+                label: 'Total Attenuation vs. Elevation (pe=5%)',
+                unit: 'Attenuation (dB)',
+                xLabel: 'Elevation Angle θ (deg)',
+                path: d => ({
+                    x: d.link_budget_analysis[1].At_curve.theta_deg,
+                    y: d.link_budget_analysis[1].At_curve.At_dB
+                })
+            },
+            // ── Contact duration: daily mean ──
+            {
+                id: 'contact_daily_mean',
+                label: 'Daily Mean Contact Duration',
+                unit: 'Duration (s)',
+                xLabel: 'Day',
+                path: d => ({
+                    x: d.contact_duration.daily_mean_duration.day,
+                    y: d.contact_duration.daily_mean_duration.mean_s
+                })
+            },
+            // ── Contact duration: moving average ──
+            {
+                id: 'contact_moving_avg',
+                label: 'Contact Duration — Moving Average',
+                unit: 'Duration (s)',
+                xLabel: 'Day',
+                path: d => ({
+                    x: d.contact_duration.daily_mean_duration.window_days || d.contact_duration.daily_mean_duration.day,
+                    y: d.contact_duration.daily_mean_duration.moving_avg_s
+                })
+            },
+            // ── Contact histogram: relative frequency ──
+            {
+                id: 'contact_hist_freq',
+                label: 'Contact Duration — Relative Frequency',
+                unit: 'Relative Frequency',
+                xLabel: 'Mean Contact Duration (s)',
+                path: d => ({
+                    x: d.contact_duration.histogram.bin_centers,
+                    y: d.contact_duration.histogram.relative_freq
+                })
+            },
+        ];
+
+        // Colour palette rotated per plot
+        const FP_COLORS = [
+            '#D9FF7F', '#00eeff', '#ff6b6b', '#ffa94d', '#b197fc',
+            '#63e6be', '#ff8787', '#74c0fc', '#a9e34b', '#f783ac'
+        ];
+
+        let fpData = null;           // cached mockdata
+        let fpCardCount = 0;         // unique card id counter
+        let fpCharts = {};           // { cardId: Chart instance }
+
+        // ── Helpers ──────────────────────────────
+
+        function fpGetSeriesData(seriesId) {
+            if (!fpData) return null;
+            const s = FP_SERIES_CATALOGUE.find(s => s.id === seriesId);
+            if (!s) return null;
+            try {
+                const raw = s.path(fpData);
+                return { series: s, raw };
+            } catch(e) {
+                console.warn('FP: failed to read series', seriesId, e);
+                return null;
+            }
+        }
+
+        function fpBuildChartData(xSeriesId, ySeriesId, color) {
+            const xResult = fpGetSeriesData(xSeriesId);
+            const yResult = fpGetSeriesData(ySeriesId);
+            if (!xResult || !yResult) return null;
+
+            const xArr = xResult.raw.y; // y-array of X-series = the values
+            const yArr = yResult.raw.y;
+            const len = Math.min(xArr.length, yArr.length);
+
+            return {
+                datasets: [{
+                    label: `${yResult.series.label}`,
+                    data: Array.from({ length: len }, (_, i) => ({ x: xArr[i], y: yArr[i] })),
+                    borderColor: color,
+                    backgroundColor: color + '1a',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.3,
+                }],
+                xLabel: xResult.series.unit,
+                yLabel: yResult.series.unit,
+            };
+        }
+
+        function fpRenderChart(cardId, xSeriesId, ySeriesId, chartType) {
+            const color = FP_COLORS[cardId % FP_COLORS.length];
+            const canvasId = `fp-canvas-${cardId}`;
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            // Destroy old instance
+            if (fpCharts[cardId]) { fpCharts[cardId].destroy(); }
+
+            const built = fpBuildChartData(xSeriesId, ySeriesId, color);
+            if (!built) return;
+
+            const ctx = canvas.getContext('2d');
+            fpCharts[cardId] = new Chart(ctx, {
+                type: chartType === 'scatter' ? 'scatter' : (chartType === 'bar' ? 'bar' : 'line'),
+                data: built,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 400, easing: 'easeOutQuart' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1E1E1E',
+                            titleColor: '#FFFFFF',
+                            bodyColor: '#A0A0A0',
+                            borderColor: '#2b2b2b',
+                            borderWidth: 1,
+                            titleFont: { family: 'Geologica', size: 10, weight: 'bold' },
+                            bodyFont:  { family: 'Geologica', size: 10 },
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: chartType === 'bar' ? 'category' : 'linear',
+                            title: { display: true, text: built.xLabel, color: '#555', font: { family: 'Geologica', size: 9, weight: 'bold' } },
+                            grid: { color: '#1f1f1f' },
+                            ticks: { color: '#555', font: { family: 'Geologica', size: 9 }, maxTicksLimit: 8 },
+                        },
+                        y: {
+                            title: { display: true, text: built.yLabel, color: '#555', font: { family: 'Geologica', size: 9, weight: 'bold' } },
+                            grid: { color: '#1f1f1f' },
+                            ticks: { color: '#555', font: { family: 'Geologica', size: 9 }, maxTicksLimit: 6 },
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── Card creation ─────────────────────────
+
+        function fpBuildSelectOptions(selectedId) {
+            return FP_SERIES_CATALOGUE.map(s =>
+                `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${s.label}</option>`
+            ).join('');
+        }
+
+        function fpAddCard(defaultX = 'elv_pdf_pe1', defaultY = 'at_curve_pe1') {
+            const id = fpCardCount++;
+            const color = FP_COLORS[id % FP_COLORS.length];
+
+            const card = document.createElement('div');
+            card.className = 'fp-card';
+            card.dataset.cardId = id;
+            card.innerHTML = `
+                <div class="fp-card-header">
+                    <span class="fp-color-dot" style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+                    <input class="fp-card-title-input" placeholder="Plot title…" value="Plot ${id + 1}">
+                    <div class="fp-axis-group">
+                        <span class="fp-axis-label">X</span>
+                        <select class="fp-select fp-x-select" data-card="${id}">${fpBuildSelectOptions(defaultX)}</select>
+                    </div>
+                    <div class="fp-axis-group">
+                        <span class="fp-axis-label">Y</span>
+                        <select class="fp-select fp-y-select" data-card="${id}">${fpBuildSelectOptions(defaultY)}</select>
+                    </div>
+                    <div class="fp-type-tabs">
+                        <button class="fp-type-tab active" data-card="${id}" data-type="line">Line</button>
+                        <button class="fp-type-tab" data-card="${id}" data-type="scatter">Scatter</button>
+                        <button class="fp-type-tab" data-card="${id}" data-type="bar">Bar</button>
+                    </div>
+                    <button class="fp-remove-btn" data-card="${id}" title="Remove plot">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    </button>
+                </div>
+                <div class="fp-canvas-wrapper">
+                    <canvas id="fp-canvas-${id}"></canvas>
+                </div>`;
+
+            document.getElementById('fpGrid').appendChild(card);
+            fpUpdateEmptyState();
+
+            // Wire up controls
+            card.querySelector('.fp-x-select').addEventListener('change', () => fpRefreshCard(id));
+            card.querySelector('.fp-y-select').addEventListener('change', () => fpRefreshCard(id));
+
+            card.querySelectorAll('.fp-type-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    card.querySelectorAll('.fp-type-tab').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    fpRefreshCard(id);
+                });
+            });
+
+            card.querySelector('.fp-remove-btn').addEventListener('click', () => {
+                if (fpCharts[id]) fpCharts[id].destroy();
+                delete fpCharts[id];
+                card.remove();
+                fpUpdateEmptyState();
+            });
+
+            // Initial render
+            if (fpData) fpRefreshCard(id);
+        }
+
+        function fpRefreshCard(id) {
+            const card = document.querySelector(`.fp-card[data-card-id="${id}"]`);
+            if (!card) return;
+            const xId = card.querySelector('.fp-x-select').value;
+            const yId = card.querySelector('.fp-y-select').value;
+            const activeType = card.querySelector('.fp-type-tab.active');
+            const chartType = activeType ? activeType.dataset.type : 'line';
+            fpRenderChart(id, xId, yId, chartType);
+        }
+
+        function fpUpdateEmptyState() {
+            const isEmpty = document.querySelectorAll('#fpGrid .fp-card').length === 0;
+            document.getElementById('fpEmptyState').style.display = isEmpty ? 'flex' : 'none';
+            document.getElementById('fpGrid').style.display = isEmpty ? 'none' : '';
+        }
+
+        // ── Init ──────────────────────────────────
+
+        async function initFreePlot() {
+            if (!fpData) {
+                try {
+                    const res = await fetch('/api/mockdata');
+                    fpData = await res.json();
+                } catch(e) {
+                    console.error('FreePlot: could not load mockdata', e);
+                    return;
+                }
+            }
+            // Re-render all existing cards on data load
+            document.querySelectorAll('#fpGrid .fp-card').forEach(card => {
+                fpRefreshCard(parseInt(card.dataset.cardId));
+            });
+        }
+
+        // Button wiring
+        document.getElementById('fpAddPlotBtn').addEventListener('click', async () => {
+            if (!fpData) await initFreePlot();
+            fpAddCard();
+        });
+
+        // Layout toggle
+        document.getElementById('fpLayoutToggle').addEventListener('click', e => {
+            const btn = e.target.closest('.fp-layout-btn');
+            if (!btn) return;
+            document.querySelectorAll('.fp-layout-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const cols = parseInt(btn.dataset.cols);
+            const grid = document.getElementById('fpGrid');
+            if (cols === 2) {
+                grid.classList.add('cols-2');
+            } else {
+                grid.classList.remove('cols-2');
+            }
+        });
+
+        // Pre-load data when Free Plot section is first shown
+        document.querySelector('[data-target="free-plot-section"]')?.addEventListener('click', () => {
+            if (!fpData) initFreePlot();
+        });
+
+        fpUpdateEmptyState();
+
     </script>
 </body>
 

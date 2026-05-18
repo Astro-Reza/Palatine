@@ -351,6 +351,16 @@ def project_delete(filename):
         return jsonify({"error": str(e)}), 500
 
 # ─── Chatbot API ───
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+from flask import Response, stream_with_context
+
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(env_path)
+
+api_key = os.getenv("GEMMA_API_KEY")
+genai_client = genai.Client(api_key=api_key) if api_key else None
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -364,6 +374,28 @@ def chat():
     
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
+
+    # Load system instruction from systemPrompt/systemPrompt.md dynamically
+    skills_path = os.path.join(os.path.dirname(__file__), 'systemPrompt', 'systemPrompt.md')
+    system_instruction = None
+    if os.path.exists(skills_path):
+        try:
+            with open(skills_path, 'r', encoding='utf-8') as f:
+                system_instruction = f.read()
+        except Exception as e:
+            print(f"Warning: Failed to load systemPrompt.md: {e}")
+
+    # Configure generation parameters based on chat mode
+    if mode == 'instant':
+        config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+            system_instruction=system_instruction
+        )
+    else:
+        config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_level="high"),
+            system_instruction=system_instruction
+        )
 
     def generate():
         try:
