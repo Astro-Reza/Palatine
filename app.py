@@ -10,6 +10,7 @@ V2_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'
 V1_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Palatine 1.0', 'static'))
 DATABASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'database'))
 PROJECTS_DIR = os.path.join(DATABASE_DIR, 'projects')
+FEEDBACK_LOG_PATH = os.path.join(DATABASE_DIR, 'feedback.jsonl')
 
 for d in [DATABASE_DIR, PROJECTS_DIR]:
     if not os.path.exists(d):
@@ -380,6 +381,40 @@ def chat():
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+@app.route('/api/chat/feedback', methods=['POST'])
+def chat_feedback():
+    """Append lightweight development feedback for a completed assistant response."""
+    data = request.json or {}
+    prompt = data.get('prompt')
+    response = data.get('response')
+    feedback = data.get('feedback')
+    mode = data.get('mode')
+    message_id = data.get('message_id')
+
+    if not isinstance(prompt, str) or not isinstance(response, str):
+        return jsonify({"error": "Prompt and response are required"}), 400
+    if feedback not in {'like', 'dislike'}:
+        return jsonify({"error": "Feedback must be 'like' or 'dislike'"}), 400
+    if mode not in {'thinking', 'instant'}:
+        return jsonify({"error": "Mode must be 'thinking' or 'instant'"}), 400
+
+    entry = {
+        "prompt": prompt,
+        "response": response,
+        "feedback": feedback,
+        "mode": mode,
+        "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+    }
+    if isinstance(message_id, str) and message_id:
+        entry["message_id"] = message_id
+
+    try:
+        with open(FEEDBACK_LOG_PATH, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+        return jsonify({"message": "Feedback recorded"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

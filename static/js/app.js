@@ -105,6 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiChatbotInput = document.getElementById('aiChatbotInput');
     const aiChatbotBody = aiChatbot ? aiChatbot.querySelector('.ai-chatbot-body') : null;
     const aiChatbotSendBtn = aiChatbotForm ? aiChatbotForm.querySelector('.ai-chatbot-send-btn') : null;
+    const arcturusConversationPopover = document.getElementById('arcturusConversationPopover');
+    const arcturusConversationMenu = document.getElementById('arcturusConversationMenu');
+    const arcturusNewChatBtn = document.getElementById('arcturusNewChatBtn');
+    const arcturusChatHistoryBtn = document.getElementById('arcturusChatHistoryBtn');
+    const arcturusHistoryPanel = document.getElementById('arcturusHistoryPanel');
+    const arcturusHistoryBackBtn = document.getElementById('arcturusHistoryBackBtn');
     const floatingLayer = document.getElementById('floating-layer');
     const middleArea = document.querySelector('.middle-area');
     const leftPanel = document.getElementById('sidePanelRight');
@@ -124,6 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let thinkingFrameIndex = 0;
         let latestPrompt = '';
         let aiChatMode = 'think'; // 'think' or 'instant'
+        let assistantMessageCounter = 0;
+        const inMemoryConversations = [];
+        let activeConversation = createInMemoryConversation();
+        inMemoryConversations.push(activeConversation);
         const aiChatbotModeToggle = document.getElementById('aiChatbotModeToggle');
         const floatingPosition = { left: 16, top: 16 };
         const SNAP_THRESHOLD = 48;
@@ -134,6 +144,80 @@ document.addEventListener('DOMContentLoaded', () => {
             '/static/icons/arcturusAI-animation3.svg',
             '/static/icons/arcturusAI-animation4.svg'
         ];
+
+        function createInMemoryConversation() {
+            const now = new Date().toISOString();
+            return {
+                conversationId: null,
+                title: 'New Chat',
+                createdAt: now,
+                updatedAt: now,
+                messages: []
+            };
+        }
+
+        function touchActiveConversation() {
+            activeConversation.updatedAt = new Date().toISOString();
+        }
+
+        function showConversationMenuView() {
+            if (!arcturusConversationMenu || !arcturusHistoryPanel) return;
+            arcturusConversationMenu.hidden = false;
+            arcturusHistoryPanel.hidden = true;
+        }
+
+        function openConversationMenu() {
+            if (!aiChatbotReopen || !arcturusConversationPopover) return;
+            showConversationMenuView();
+            arcturusConversationPopover.hidden = false;
+            aiChatbotReopen.setAttribute('aria-expanded', 'true');
+            window.requestAnimationFrame(() => arcturusNewChatBtn?.focus());
+        }
+
+        function closeConversationMenu({ restoreFocus = false } = {}) {
+            if (!aiChatbotReopen || !arcturusConversationPopover) return;
+            arcturusConversationPopover.hidden = true;
+            aiChatbotReopen.setAttribute('aria-expanded', 'false');
+            showConversationMenuView();
+            if (restoreFocus) aiChatbotReopen.focus();
+        }
+
+        function toggleConversationMenu() {
+            if (!arcturusConversationPopover) return;
+            if (arcturusConversationPopover.hidden) {
+                openConversationMenu();
+            } else {
+                closeConversationMenu();
+            }
+        }
+
+        function showConversationHistoryPlaceholder() {
+            if (!arcturusConversationMenu || !arcturusHistoryPanel) return;
+            arcturusConversationMenu.hidden = true;
+            arcturusHistoryPanel.hidden = false;
+            window.requestAnimationFrame(() => arcturusHistoryBackBtn?.focus());
+        }
+
+        function startNewInMemoryConversation() {
+            if (isProcessing && activeRequest) {
+                stopActiveResponse();
+            }
+
+            // Future persistence seam: this is where POST /api/conversations can create a durable session.
+            activeConversation = createInMemoryConversation();
+            inMemoryConversations.push(activeConversation);
+            latestPrompt = '';
+            aiState = 'idle';
+            activeRequest = null;
+            if (aiChatbotBody) aiChatbotBody.replaceChildren();
+            if (aiChatbotInput) {
+                aiChatbotInput.value = '';
+                resizeChatbotInput();
+                aiChatbotInput.focus();
+            }
+            clearLauncherState();
+            closeConversationMenu();
+        }
 
         function clearSnapPreview() {
             if (!supportsFloatingChat) return;
@@ -218,21 +302,61 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        function appendMath(parent, expression, displayMode = false) {
+            const wrapper = document.createElement(displayMode ? 'div' : 'span');
+            wrapper.className = displayMode ? 'ai-chatbot-math-block' : 'ai-chatbot-math-inline';
+            wrapper.textContent = expression;
+
+            if (window.katex?.render) {
+                try {
+                    window.katex.render(expression, wrapper, {
+                        displayMode,
+                        throwOnError: false
+                    });
+                } catch (error) {
+                    console.warn('Unable to render equation:', error);
+                }
+            }
+
+            parent.appendChild(wrapper);
+        }
+
         function appendInlineMarkdown(parent, text) {
-            const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean);
-            parts.forEach((part) => {
-                if (part.startsWith('`') && part.endsWith('`')) {
+            const tokenPattern = /(`[^`]+`|\$[^$\n]+\$|\*\*[^*]+\*\*|\[[^\]]+\]\((https?:\/\/[^\s)]+)\))/g;
+            let cursor = 0;
+            let match;
+
+            while ((match = tokenPattern.exec(text)) !== null) {
+                if (match.index > cursor) {
+                    parent.appendChild(document.createTextNode(text.slice(cursor, match.index)));
+                }
+
+                const token = match[0];
+                if (token.startsWith('`')) {
                     const code = document.createElement('code');
-                    code.textContent = part.slice(1, -1);
+                    code.textContent = token.slice(1, -1);
                     parent.appendChild(code);
-                } else if (part.startsWith('**') && part.endsWith('**')) {
+                } else if (token.startsWith('$')) {
+                    appendMath(parent, token.slice(1, -1));
+                } else if (token.startsWith('**')) {
                     const strong = document.createElement('strong');
-                    strong.textContent = part.slice(2, -2);
+                    strong.textContent = token.slice(2, -2);
                     parent.appendChild(strong);
                 } else {
-                    parent.appendChild(document.createTextNode(part));
+                    const linkMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+                    const link = document.createElement('a');
+                    link.href = linkMatch[2];
+                    link.textContent = linkMatch[1];
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    parent.appendChild(link);
                 }
-            });
+                cursor = tokenPattern.lastIndex;
+            }
+
+            if (cursor < text.length) {
+                parent.appendChild(document.createTextNode(text.slice(cursor)));
+            }
         }
 
         function renderMarkdown(container, text) {
@@ -240,6 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let paragraph = null;
             let list = null;
             let codeBlock = null;
+            let blockquote = null;
+            let mathBlock = null;
 
             function flushParagraph() {
                 paragraph = null;
@@ -249,12 +375,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 list = null;
             }
 
+            function flushBlockquote() {
+                blockquote = null;
+            }
+
             lines.forEach((rawLine) => {
                 const line = rawLine.trimEnd();
+
+                if (line.trim() === '$$') {
+                    flushParagraph();
+                    flushList();
+                    flushBlockquote();
+                    if (mathBlock) {
+                        appendMath(container, mathBlock.join('\n').trim(), true);
+                        mathBlock = null;
+                    } else {
+                        mathBlock = [];
+                    }
+                    return;
+                }
+
+                if (mathBlock) {
+                    mathBlock.push(rawLine);
+                    return;
+                }
 
                 if (line.startsWith('```')) {
                     flushParagraph();
                     flushList();
+                    flushBlockquote();
                     if (codeBlock) {
                         codeBlock = null;
                     } else {
@@ -275,12 +424,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!line.trim()) {
                     flushParagraph();
                     flushList();
+                    flushBlockquote();
                     return;
                 }
 
                 if (/^[-*]\s+/.test(line)) {
                     flushParagraph();
-                    if (!list) {
+                    flushBlockquote();
+                    if (!list || list.tagName !== 'UL') {
                         list = document.createElement('ul');
                         container.appendChild(list);
                     }
@@ -290,7 +441,45 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                if (/^\d+\.\s+/.test(line)) {
+                    flushParagraph();
+                    flushBlockquote();
+                    if (!list || list.tagName !== 'OL') {
+                        list = document.createElement('ol');
+                        container.appendChild(list);
+                    }
+                    const item = document.createElement('li');
+                    appendInlineMarkdown(item, line.replace(/^\d+\.\s+/, ''));
+                    list.appendChild(item);
+                    return;
+                }
+
+                if (/^>\s?/.test(line)) {
+                    flushParagraph();
+                    flushList();
+                    if (!blockquote) {
+                        blockquote = document.createElement('blockquote');
+                        container.appendChild(blockquote);
+                    } else {
+                        blockquote.appendChild(document.createElement('br'));
+                    }
+                    appendInlineMarkdown(blockquote, line.replace(/^>\s?/, ''));
+                    return;
+                }
+
+                const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+                if (headingMatch) {
+                    flushParagraph();
+                    flushList();
+                    flushBlockquote();
+                    const heading = document.createElement(`h${headingMatch[1].length}`);
+                    appendInlineMarkdown(heading, headingMatch[2]);
+                    container.appendChild(heading);
+                    return;
+                }
+
                 flushList();
+                flushBlockquote();
                 if (!paragraph) {
                     paragraph = document.createElement('p');
                     container.appendChild(paragraph);
@@ -299,17 +488,95 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 appendInlineMarkdown(paragraph, line);
             });
+
+            if (mathBlock) {
+                const fallback = document.createElement('p');
+                fallback.textContent = `$$\n${mathBlock.join('\n')}`;
+                container.appendChild(fallback);
+            }
         }
 
-        function createMessageActions(text, prompt = '') {
+        function isNearBottom(container) {
+            if (!container) return true;
+            const threshold = 80;
+            return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+        }
+
+        function scrollToBottomIfNearBottom(wasNearBottom = isNearBottom(aiChatbotBody)) {
+            if (aiChatbotBody && wasNearBottom) {
+                aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+            }
+        }
+
+        function createAssistantMessageId() {
+            if (window.crypto?.randomUUID) return `msg_${window.crypto.randomUUID()}`;
+            assistantMessageCounter += 1;
+            return `msg_${Date.now()}_${assistantMessageCounter}`;
+        }
+
+        function feedbackModeForLog() {
+            return aiChatMode === 'instant' ? 'instant' : 'thinking';
+        }
+
+        async function submitMessageFeedback(actions, feedback, payload, branch = null) {
+            if (actions.dataset.feedbackSubmitted || actions.dataset.feedbackPending) return;
+            actions.dataset.feedbackPending = 'true';
+
+            try {
+                const response = await fetch('/api/chat/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...payload, feedback })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Feedback API Error: ' + response.statusText);
+                }
+
+                actions.dataset.feedbackSubmitted = feedback;
+                if (branch) {
+                    branch.feedback = feedback;
+                    touchActiveConversation();
+                }
+                actions.querySelectorAll('[data-feedback]').forEach((button) => {
+                    const selected = button.dataset.feedback === feedback;
+                    button.classList.toggle('is-selected', selected);
+                    button.disabled = true;
+                    button.setAttribute('aria-pressed', String(selected));
+                });
+            } catch (error) {
+                console.error('Unable to record feedback:', error);
+            } finally {
+                delete actions.dataset.feedbackPending;
+            }
+        }
+
+        function createMessageActions(text, prompt = '', options = {}) {
             const actions = document.createElement('div');
             actions.className = 'ai-chatbot-message-actions';
-            [
-                { label: 'Copy response', icon: '/static/icons/copy.svg', onClick: () => navigator.clipboard?.writeText(text) },
-                { label: 'Bad response', icon: '/static/icons/dislike.svg' },
-                { label: 'Good response', icon: '/static/icons/like.svg' },
-                { label: 'Regenerate response', icon: '/static/icons/refresh.svg', onClick: () => requestAssistantResponse(prompt || latestPrompt) }
-            ].forEach(({ label, icon, onClick }) => {
+            const feedbackPayload = {
+                prompt,
+                response: text,
+                mode: options.mode || feedbackModeForLog(),
+                message_id: options.messageId || createAssistantMessageId()
+            };
+            const actionDefinitions = [
+                { label: 'Copy response', icon: '/static/icons/copy.svg', onClick: () => navigator.clipboard?.writeText(text) }
+            ];
+            if (prompt) {
+                actionDefinitions.push(
+                    { label: 'Bad response', icon: '/static/icons/dislike.svg', feedback: 'dislike' },
+                    { label: 'Good response', icon: '/static/icons/like.svg', feedback: 'like' }
+                );
+            }
+            if (options.onRefresh || prompt) {
+                actionDefinitions.push({
+                    label: 'Regenerate response',
+                    icon: '/static/icons/refresh.svg',
+                    onClick: options.onRefresh || (() => requestAssistantResponse(prompt || latestPrompt))
+                });
+            }
+            actionDefinitions.forEach(({ label, icon, onClick, feedback }) => {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'ai-chatbot-action-btn';
@@ -320,13 +587,128 @@ document.addEventListener('DOMContentLoaded', () => {
                 image.alt = '';
                 button.appendChild(image);
                 if (onClick) button.addEventListener('click', onClick);
+                if (feedback) {
+                    button.dataset.feedback = feedback;
+                    const selected = options.branch?.feedback === feedback;
+                    button.classList.toggle('is-selected', selected);
+                    button.disabled = Boolean(options.branch?.feedback);
+                    button.setAttribute('aria-pressed', String(selected));
+                    button.addEventListener('click', () => submitMessageFeedback(actions, feedback, feedbackPayload, options.branch));
+                }
                 actions.appendChild(button);
             });
             return actions;
         }
 
+        function createAssistantState(originalPrompt, mode) {
+            return {
+                originalPrompt,
+                mode,
+                branches: [],
+                activeBranchIndex: 0,
+                conversationEntry: null
+            };
+        }
+
+        function syncAssistantConversationEntry(state) {
+            if (!state?.conversationEntry) return;
+            state.conversationEntry.activeBranchIndex = state.activeBranchIndex;
+            touchActiveConversation();
+        }
+
+        function createBranchNavigation(message) {
+            const state = message.assistantState;
+            if (!state || state.branches.length < 2) return null;
+
+            const nav = document.createElement('div');
+            nav.className = 'ai-chatbot-branch-nav';
+            const previous = document.createElement('button');
+            previous.type = 'button';
+            previous.className = 'ai-chatbot-branch-btn';
+            previous.textContent = '<';
+            previous.title = 'Previous response branch';
+            previous.disabled = state.activeBranchIndex === 0;
+            previous.addEventListener('click', () => {
+                if (state.activeBranchIndex > 0) {
+                    state.activeBranchIndex -= 1;
+                    renderAssistantBranch(message);
+                }
+            });
+
+            const indicator = document.createElement('span');
+            indicator.className = 'ai-chatbot-branch-indicator';
+            indicator.textContent = `${state.activeBranchIndex + 1} / ${state.branches.length}`;
+
+            const next = document.createElement('button');
+            next.type = 'button';
+            next.className = 'ai-chatbot-branch-btn';
+            next.textContent = '>';
+            next.title = 'Next response branch';
+            next.disabled = state.activeBranchIndex === state.branches.length - 1;
+            next.addEventListener('click', () => {
+                if (state.activeBranchIndex < state.branches.length - 1) {
+                    state.activeBranchIndex += 1;
+                    renderAssistantBranch(message);
+                }
+            });
+
+            nav.append(previous, indicator, next);
+            return nav;
+        }
+
+        function createStoredReasoningBlock(text) {
+            if (!text) return null;
+            const reasoning = createReasoningBlock();
+            const content = reasoning.querySelector('.ai-chatbot-reasoning-content');
+            const label = reasoning.querySelector('.ai-chatbot-reasoning-label');
+            content.innerHTML = '';
+            renderMarkdown(content, text);
+            if (label) {
+                label.classList.remove('is-thinking');
+                label.textContent = 'Thought process';
+            }
+            setReasoningOpen(reasoning, false);
+            return reasoning;
+        }
+
+        function renderAssistantBranch(message) {
+            const state = message.assistantState;
+            if (!state) return;
+            const branch = state.branches[state.activeBranchIndex];
+            if (!branch) return;
+            const wasNearBottom = isNearBottom(aiChatbotBody);
+            syncAssistantConversationEntry(state);
+
+            message.replaceChildren();
+            if (state.mode === 'thinking' && branch.reasoning) {
+                const reasoning = createStoredReasoningBlock(branch.reasoning);
+                if (reasoning) message.appendChild(reasoning);
+            }
+
+            const content = document.createElement('div');
+            content.className = 'ai-chatbot-message-content';
+            renderMarkdown(content, branch.response);
+            message.appendChild(content);
+
+            const footer = document.createElement('div');
+            footer.className = 'ai-chatbot-message-footer';
+            footer.appendChild(createMessageActions(branch.response, state.originalPrompt, {
+                mode: state.mode,
+                messageId: branch.messageId,
+                branch,
+                onRefresh: state.originalPrompt
+                    ? () => requestAssistantResponse(state.originalPrompt, { targetMessage: message, mode: state.mode })
+                    : null
+            }));
+            const navigation = createBranchNavigation(message);
+            if (navigation) footer.appendChild(navigation);
+            message.appendChild(footer);
+            scrollToBottomIfNearBottom(wasNearBottom);
+        }
+
         function appendMessage(sender, text, options = {}) {
             if (!aiChatbotBody) return;
+            const wasNearBottom = isNearBottom(aiChatbotBody);
             const message = document.createElement('div');
             message.className = `ai-chatbot-message ${sender}`;
             const content = document.createElement('div');
@@ -334,10 +716,13 @@ document.addEventListener('DOMContentLoaded', () => {
             renderMarkdown(content, text);
             message.appendChild(content);
             if (sender === 'assistant' && options.actions !== false) {
-                message.appendChild(createMessageActions(text, options.prompt));
+                message.appendChild(createMessageActions(text, options.prompt, {
+                    mode: options.mode,
+                    messageId: options.messageId
+                }));
             }
             aiChatbotBody.appendChild(message);
-            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+            scrollToBottomIfNearBottom(wasNearBottom);
             return message;
         }
 
@@ -375,12 +760,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function createPendingAssistantMessage() {
             if (!aiChatbotBody) return null;
+            const wasNearBottom = isNearBottom(aiChatbotBody);
             const message = document.createElement('div');
             message.className = 'ai-chatbot-message assistant';
             const reasoning = createReasoningBlock();
             message.appendChild(reasoning);
             aiChatbotBody.appendChild(message);
-            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+            scrollToBottomIfNearBottom(wasNearBottom);
             return { message, reasoning };
         }
 
@@ -432,12 +818,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function appendThinkingRow(text, parent = aiChatbotBody) {
             if (!parent) return null;
+            const wasNearBottom = isNearBottom(aiChatbotBody);
             const row = document.createElement('div');
             row.className = 'chatbot-thinking-row';
             row.innerHTML = `<span class="chatbot-thinking-text"></span>`;
             row.querySelector('.chatbot-thinking-text').textContent = text;
             parent.appendChild(row);
-            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+            scrollToBottomIfNearBottom(wasNearBottom);
             return row;
         }
 
@@ -448,13 +835,20 @@ document.addEventListener('DOMContentLoaded', () => {
             aiChatbotSendBtn.classList.toggle('is-processing', processing);
             aiChatbotSendBtn.title = processing ? 'Stop generating' : 'Send';
             aiChatbotSendBtn.setAttribute('aria-label', processing ? 'Stop generating' : 'Send');
-            aiChatbotSendBtn.textContent = processing ? '■' : 'Send';
+            aiChatbotSendBtn.replaceChildren();
+            if (processing) {
+                const stopSquare = document.createElement('span');
+                stopSquare.className = 'stop-square';
+                aiChatbotSendBtn.appendChild(stopSquare);
+            } else {
+                aiChatbotSendBtn.textContent = 'Send';
+            }
         }
 
         function restoreInputAfterResponse() {
             setProcessingState(false);
             if (aiChatbotInput) aiChatbotInput.focus();
-            if (aiChatbotBody) aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+            scrollToBottomIfNearBottom();
         }
 
         function resizeChatbotInput() {
@@ -485,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function stopActiveResponse() {
             if (!isProcessing || !activeRequest) return;
 
-            const { controller, reasoning, responseContent, thinkingRow } = activeRequest;
+            const { controller, message, reasoning, responseContent, thinkingRow, branch } = activeRequest;
             latestRequestId += 1;
             controller.abort();
             stopOpenChatbotThinkingAnimation();
@@ -495,13 +889,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 responseContent.innerHTML = '';
                 renderMarkdown(responseContent, 'Generation stopped.');
             }
+            if (branch) {
+                branch.response = 'Generation stopped.';
+                branch.timestamp = new Date().toISOString();
+                renderAssistantBranch(message);
+            }
             aiState = 'idle';
             activeRequest = null;
             restoreInputAfterResponse();
             clearLauncherState();
         }
 
-        async function requestAssistantResponse(text) {
+        async function requestAssistantResponse(text, options = {}) {
             if (!text || isProcessing) return;
             latestPrompt = text;
             const requestId = ++latestRequestId;
@@ -510,12 +909,42 @@ document.addEventListener('DOMContentLoaded', () => {
             setLauncherState('thinking');
             setProcessingState(true);
 
-            const message = document.createElement('div');
+            const responseMode = options.mode || feedbackModeForLog();
+            const isBranchRegeneration = Boolean(options.targetMessage);
+            const message = options.targetMessage || document.createElement('div');
             message.className = 'ai-chatbot-message assistant';
+            if (!message.assistantState) {
+                message.assistantState = createAssistantState(text, responseMode);
+            }
+            const state = message.assistantState;
+            if (!isBranchRegeneration) {
+                const conversationEntry = {
+                    role: 'assistant',
+                    originalPrompt: state.originalPrompt,
+                    mode: state.mode,
+                    branches: state.branches,
+                    activeBranchIndex: state.activeBranchIndex
+                };
+                state.conversationEntry = conversationEntry;
+                activeConversation.messages.push(conversationEntry);
+                touchActiveConversation();
+            }
+            const messageId = createAssistantMessageId();
+            const branch = {
+                messageId,
+                response: '',
+                reasoning: '',
+                feedback: null,
+                timestamp: null
+            };
+            state.branches.push(branch);
+            state.activeBranchIndex = state.branches.length - 1;
+            syncAssistantConversationEntry(state);
+            message.replaceChildren();
             
             let reasoning = null;
             let reasoningContent = null;
-            if (aiChatMode === 'think') {
+            if (responseMode === 'thinking') {
                 reasoning = createReasoningBlock();
                 reasoningContent = reasoning.querySelector('.ai-chatbot-reasoning-content');
                 reasoningContent.innerHTML = ''; // clear default
@@ -526,22 +955,21 @@ document.addEventListener('DOMContentLoaded', () => {
             responseContent.className = 'ai-chatbot-message-content';
             message.appendChild(responseContent);
 
-            aiChatbotBody.appendChild(message);
+            const wasNearBottomBeforeMessage = isNearBottom(aiChatbotBody);
+            if (!isBranchRegeneration) aiChatbotBody.appendChild(message);
             const thinkingRow = appendThinkingRow('Processing', message);
-            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+            scrollToBottomIfNearBottom(wasNearBottomBeforeMessage);
 
             const rIcon = reasoning?.querySelector('.ai-chatbot-reasoning-icon');
             const tText = thinkingRow?.querySelector('.chatbot-thinking-text');
             startOpenChatbotThinkingAnimation([rIcon], [tText]);
-            activeRequest = { requestId, controller, message, reasoning, responseContent, thinkingRow };
-
-            let fullRawText = '';
+            activeRequest = { requestId, controller, message, reasoning, responseContent, thinkingRow, branch };
 
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, mode: aiChatMode }),
+                    body: JSON.stringify({ prompt: text, mode: responseMode === 'thinking' ? 'think' : 'instant' }),
                     signal: controller.signal
                 });
 
@@ -579,15 +1007,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                     currentMainText += data.text;
                                 }
 
-                                // Update UI
-                                if (aiChatMode === 'think' && reasoningContent) {
+                                // Update UI without stealing the reader's scroll position.
+                                const wasNearBottomBeforeUpdate = isNearBottom(aiChatbotBody);
+                                if (responseMode === 'thinking' && reasoningContent) {
                                     reasoningContent.innerHTML = '';
                                     renderMarkdown(reasoningContent, currentThinkText.trim() || 'Thinking...');
                                 }
 
                                 responseContent.innerHTML = '';
                                 renderMarkdown(responseContent, currentMainText.trim());
-                                aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+                                scrollToBottomIfNearBottom(wasNearBottomBeforeUpdate);
 
                             } catch (e) {
                                 console.error('Parse error or backend error:', e);
@@ -603,9 +1032,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reasoning) completeReasoning(reasoning);
 
                 aiState = 'success';
-                
-                message.appendChild(createMessageActions(currentMainText.trim(), text));
-                aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+                branch.response = currentMainText.trim();
+                branch.reasoning = currentThinkText.trim();
+                branch.timestamp = new Date().toISOString();
+                renderAssistantBranch(message);
                 setLauncherState('success');
                 activeRequest = null;
                 restoreInputAfterResponse();
@@ -618,8 +1048,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reasoning) completeReasoning(reasoning);
 
                 aiState = 'failed';
-                responseContent.innerHTML = '';
-                renderMarkdown(responseContent, '**Sorry — I could not complete that response.** Please try again.');
+                branch.response = '**Sorry — I could not complete that response.** Please try again.';
+                branch.reasoning = currentThinkText.trim();
+                branch.timestamp = new Date().toISOString();
+                renderAssistantBranch(message);
                 setLauncherState('failed');
                 activeRequest = null;
                 restoreInputAfterResponse();
@@ -637,12 +1069,14 @@ document.addEventListener('DOMContentLoaded', () => {
         function closeChatbot() {
             aiChatbot.classList.remove('minimized');
             aiChatbot.hidden = true;
+            closeConversationMenu();
             setLauncherState(aiState);
         }
 
         function minimizeChatbot() {
             aiChatbot.classList.add('minimized');
             aiChatbot.hidden = true;
+            closeConversationMenu();
             setLauncherState(aiState);
         }
 
@@ -725,8 +1159,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (aiChatbotReopen) {
             aiChatbotReopen.addEventListener('click', () => {
                 if (aiChatbot.hidden) openChatbot();
+                toggleConversationMenu();
             });
         }
+
+        if (arcturusNewChatBtn) {
+            arcturusNewChatBtn.addEventListener('click', startNewInMemoryConversation);
+        }
+
+        if (arcturusChatHistoryBtn) {
+            arcturusChatHistoryBtn.addEventListener('click', showConversationHistoryPlaceholder);
+        }
+
+        if (arcturusHistoryBackBtn) {
+            arcturusHistoryBackBtn.addEventListener('click', () => {
+                showConversationMenuView();
+                window.requestAnimationFrame(() => arcturusChatHistoryBtn?.focus());
+            });
+        }
+
+        document.addEventListener('mousedown', (event) => {
+            if (
+                !arcturusConversationPopover ||
+                arcturusConversationPopover.hidden ||
+                (event.target instanceof Element && event.target.closest('.arcturus-conversation-menu-anchor'))
+            ) {
+                return;
+            }
+            closeConversationMenu();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && arcturusConversationPopover && !arcturusConversationPopover.hidden) {
+                closeConversationMenu({ restoreFocus: true });
+            }
+        });
 
         if (aiMinimizeBtn) {
             aiMinimizeBtn.addEventListener('click', minimizeChatbot);
@@ -784,6 +1251,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!text) return;
 
                 appendMessage('user', text);
+                activeConversation.messages.push({ role: 'user', content: text });
+                touchActiveConversation();
                 aiChatbotInput.value = '';
                 resizeChatbotInput();
                 requestAssistantResponse(text);
