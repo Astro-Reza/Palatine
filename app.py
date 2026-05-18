@@ -3,7 +3,14 @@ import json
 import yaml
 import re
 from datetime import datetime, timezone
-from flask import Flask, render_template, send_from_directory, abort, request, jsonify
+from flask import Flask, render_template, send_from_directory, abort, request, jsonify, Response
+from flask.wrappers import Response as FlaskResponse
+from flask import stream_with_context
+from dotenv import load_dotenv
+
+# Load .env FIRST before configuring AI
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+
 import google.generativeai as genai
 
 app = Flask(__name__, template_folder='templates', static_url_path='/none')
@@ -51,10 +58,6 @@ def ground_system():
 @app.route('/link-result')
 def link_result():
     return render_template('link-result.html')
-
-@app.route('/ai-chat')
-def ai_chat():
-    return render_template('ai-chat.html')
 
 @app.route('/api/mockdata')
 def get_mockdata():
@@ -119,6 +122,33 @@ def _make_project_template(name="Untitled Project"):
 def _safe_filename(name):
     """Sanitise a project name into a safe filename (without extension)."""
     return name.strip().replace(' ', '_').lower()
+
+# ─── AI System Prompts Registry ───
+
+SYSTEM_PROMPTS = {
+    "classifier":          "systemPrompt/classifier.md",
+    "project_manage":      "systemPrompt/projectManager.md",
+    "session_state":       "systemPrompt/sessionExplainer.md",
+    "constellation_edit":  "systemPrompt/constellationEditor.md",
+    "payload_edit":        "systemPrompt/payloadEditor.md",
+    "groundstation_edit":  "systemPrompt/groundSystem/groundStationEditor.md",
+    "link_budget":         "systemPrompt/linkBudgetCalculator.md",
+    "elevation_stats":     "systemPrompt/elevationAnalyst.md",
+    "attenuation":         "systemPrompt/attenuationAdvisor.md",
+    "link_margin":         "systemPrompt/linkMarginAnalyst.md",
+    "outage_probability":  "systemPrompt/outageReporter.md",
+    "explain":             "systemPrompt/platformExplainer.md",
+    "unclear":             "systemPrompt/errorHandler.md",
+}
+
+def load_prompt(intent: str) -> str:
+    """Load system prompt from file."""
+    filepath = SYSTEM_PROMPTS.get(intent, SYSTEM_PROMPTS["unclear"])
+    prompt_path = os.path.join(os.path.dirname(__file__), filepath)
+    if os.path.exists(prompt_path):
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "You are a helpful AI assistant for the Palatine satellite mission planning platform."
 
 @app.route('/api/project/new', methods=['POST'])
 def project_new():
@@ -321,83 +351,135 @@ def project_delete(filename):
         return jsonify({"error": str(e)}), 500
 
 # ─── Chatbot API ───
-from dotenv import load_dotenv
-from google import genai
-from flask import Response, stream_with_context
-
-env_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(env_path)
-
-api_key = os.getenv("GEMMA_API_KEY")
-genai_client = genai.Client(api_key=api_key) if api_key else None
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    if not genai_client:
+    if not gemma_model:
         return jsonify({"error": "GEMMA_API_KEY is not configured in .env"}), 500
         
     data = request.json or {}
     prompt = data.get('prompt', '')
     mode = data.get('mode', 'think')
+    project_state = data.get('project_state', {})
     
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
 
     def generate():
         try:
-            response = genai_client.models.generate_content_stream(
-                model='gemma-4-26b-a4b-it',
-                contents=prompt
-            )
-            for chunk in response:
-                if getattr(chunk, 'candidates', None) and chunk.candidates:
-                    candidate = chunk.candidates[0]
-                    if getattr(candidate, 'content', None) and getattr(candidate.content, 'parts', None):
-                        for part in candidate.content.parts:
-                            if not getattr(part, 'text', None):
-                                continue
-                                
-                            payload = {}
-                            # Check if the SDK marked this part as a thought
-                            if getattr(part, 'thought', False):
-                                payload['thought'] = part.text
-                            else:
-                                payload['text'] = part.text
-                                
-                            yield f"data: {json.dumps(payload)}\n\n"
+            print(f"[DEBUG] Chat request: prompt='{prompt[:50]}...'", flush=True)
+            
+            # Step 1: Classify intent
+            print("[DEBUG] Loading classifier prompt", flush=True)
+            classifier_prompt = load_prompt("classifier")
+            classify_full = f"""{classifier_prompt}
+
+User prompt: "{prompt}"
+
+Return ONLY one label (no explanation):"""
+            
+            print("[DEBUG] Calling Gemma for classification", flush=True)
+            classify_response = gemma_model.generate_content(classify_full, generation_config={
+                "temperature": 0.1,
+                "top_p": 0.8,
+                "top_k": 40
+            })
+            
+            # Extract the label - Gemma may output reasoning, so check all lines for a valid label
+            response_text = classify_response.text.strip().lower()
+            intent = "unclear"
+            
+            # First, try to find any line that exactly matches a known label
+            for line in response_text.split('\n'):
+                line = line.strip().lower()
+                if line in SYSTEM_PROMPTS:
+                    intent = line
+                    break
+            
+            print(f"[DEBUG] Classified intent: '{intent}'", flush=True)
+            if intent not in SYSTEM_PROMPTS:
+                intent = "unclear"
+            
+            # Step 2: Load appropriate system prompt
+            print(f"[DEBUG] Loading system prompt for: '{intent}'", flush=True)
+            system_prompt = load_prompt(intent)
+            
+            # Build full context
+            if intent in ["explain", "unclear"]:
+                full_prompt = f"""{system_prompt}
+
+User prompt: "{prompt}"
+
+Respond helpfully."""
+            else:
+                full_prompt = f"""{system_prompt}
+
+Current project state:
+{json.dumps(project_state, indent=2)}
+
+User instruction: "{prompt}"
+
+Return the complete updated project state as valid JSON only (no markdown, no explanation)."""
+            
+            # Step 3: Stream response with thinking (if mode is 'think')
+            print("[DEBUG] Calling Gemma for full response", flush=True)
+            if mode == 'think':
+                response = gemma_model.generate_content(
+                    full_prompt,
+                    generation_config={"temperature": 0.2, "max_output_tokens": 2000}
+                )
+            else:
+                response = gemma_model.generate_content(
+                    full_prompt,
+                    generation_config={"temperature": 0.2, "max_output_tokens": 2000}
+                )
+            
+            raw_text = response.text
+            print(f"[DEBUG] Got response: {len(raw_text)} chars", flush=True)
+            
+            # For state-modifying prompts, extract JSON
+            if intent not in ["explain", "unclear", "session_state"]:
+                json_start = raw_text.find('{')
+                json_end = raw_text.rfind('}')
+                if json_start >= 0 and json_end > json_start:
+                    json_text = raw_text[json_start:json_end+1]
+                    try:
+                        updated_state = json.loads(json_text)
+                        # Auto-save
+                        filename = project_state.get('_filename')
+                        if filename and filename.endswith('.yaml'):
+                            filepath = os.path.join(PROJECTS_DIR, filename)
+                            save_data = {k: v for k, v in updated_state.items() if not k.startswith('_')}
+                            with open(filepath, 'w', encoding='utf-8') as f:
+                                yaml.safe_dump(save_data, f, default_flow_style=False, sort_keys=False)
+                        raw_text = json.dumps({
+                            "type": "state_update",
+                            "updated_state": updated_state,
+                            "saved": bool(filename)
+                        })
+                    except json.JSONDecodeError:
+                        pass
+            
+            # Stream response
+            print("[DEBUG] Sending response", flush=True)
+            yield f"data: {json.dumps({'text': raw_text})}\n\n"
             yield "data: [DONE]\n\n"
+            
         except Exception as e:
+            import traceback
+            print(f"[ERROR] Exception in generate(): {e}", flush=True)
+            print(traceback.format_exc(), flush=True)
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+
 # ─── AI Integration (Classifier + Prompt Router) ───
 
-# System prompts registry
-SYSTEM_PROMPTS = {
-    "classifier":          "systemPrompt/classifier.md",
-    "project_manage":      "systemPrompt/projectManager.md",
-    "session_state":       "systemPrompt/sessionExplainer.md",
-    "constellation_edit":  "systemPrompt/constellationEditor.md",
-    "payload_edit":        "systemPrompt/payloadEditor.md",
-    "groundstation_edit":  "systemPrompt/groundSystem/groundStationEditor.md",
-    "link_budget":         "systemPrompt/linkBudgetCalculator.md",
-    "elevation_stats":     "systemPrompt/elevationAnalyst.md",
-    "attenuation":         "systemPrompt/attenuationAdvisor.md",
-    "link_margin":         "systemPrompt/linkMarginAnalyst.md",
-    "outage_probability":  "systemPrompt/outageReporter.md",
-    "explain":             "systemPrompt/platformExplainer.md",
-    "unclear":             "systemPrompt/errorHandler.md",
-}
 
-def load_prompt(intent: str) -> str:
-    """Load system prompt from file."""
-    filepath = SYSTEM_PROMPTS.get(intent, SYSTEM_PROMPTS["unclear"])
-    prompt_path = os.path.join(os.path.dirname(__file__), filepath)
-    if os.path.exists(prompt_path):
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    return "You are a helpful AI assistant for the Palatine satellite mission planning platform."
+# ─── Deprecated: Use /api/chat instead ───
 
 @app.route('/api/ai/classify', methods=['POST'])
 def classify_intent():
