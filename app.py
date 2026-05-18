@@ -52,6 +52,10 @@ def ground_system():
 def link_result():
     return render_template('link-result.html')
 
+@app.route('/ai-chat')
+def ai_chat():
+    return render_template('ai-chat.html')
+
 @app.route('/api/mockdata')
 def get_mockdata():
     mockdata_path = os.path.join(os.path.dirname(__file__), 'arcturus', 'mockdata.json')
