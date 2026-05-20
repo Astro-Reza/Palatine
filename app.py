@@ -314,12 +314,73 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from flask import Response, stream_with_context
+from pydantic import BaseModel, Field
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(env_path)
 
 api_key = os.getenv("GEMMA_API_KEY")
 genai_client = genai.Client(api_key=api_key) if api_key else None
+GEMMA_STOP_SEQUENCES = ["<end_of_turn>", "<eos>"]
+MODEL_FAST = "models/gemini-3.1-flash-lite"
+MODEL_HEAVY = "models/gemma-4-26b-a4b-it"
+
+
+class RouterDecision(BaseModel):
+    complexity: str = Field(
+        description="LOW for simple prompts, HIGH for multi-step math/code/engineering tasks."
+    )
+    selected_model: str = Field(
+        description=f"Must be either {MODEL_FAST} or {MODEL_HEAVY}."
+    )
+    reasoning: str = Field(
+        description="One short sentence explaining route selection."
+    )
+
+
+def _build_gemma_user_prompt(system_text, user_text):
+    """Gemma-safe format: fold system guidance into the user turn."""
+    instruction = (system_text or "").strip()
+    question = (user_text or "").strip()
+
+    if instruction:
+        return f"Instruction:\n{instruction}\n\nQuestion:\n{question}"
+    return question
+
+
+def _route_chat_model(user_prompt: str) -> RouterDecision:
+    router_prompt = f"""Analyze the following user prompt and classify complexity.
+- Select '{MODEL_FAST}' for greetings, small talk, simple explanation, rewrite, translation, or basic Q&A.
+- Select '{MODEL_HEAVY}' for multi-step math, coding, engineering, physics analysis, or complex logic.
+
+User Prompt: {user_prompt}
+"""
+
+    try:
+        route_response = genai_client.models.generate_content(
+            model=MODEL_FAST,
+            contents=router_prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=RouterDecision,
+                temperature=0.0,
+                stop_sequences=GEMMA_STOP_SEQUENCES
+            )
+        )
+        decision = RouterDecision.model_validate_json(route_response.text)
+    except Exception:
+        decision = RouterDecision(
+            complexity="LOW",
+            selected_model=MODEL_FAST,
+            reasoning="Routing fallback: defaulted to fast model."
+        )
+
+    if decision.selected_model not in {MODEL_FAST, MODEL_HEAVY}:
+        decision.selected_model = MODEL_FAST
+        decision.complexity = "LOW"
+        decision.reasoning = "Invalid route output: forced fast model fallback."
+
+    return decision
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -343,23 +404,23 @@ def chat():
         except Exception as e:
             print(f"Warning: Failed to load systemPrompt.md: {e}")
 
+    merged_prompt = _build_gemma_user_prompt(system_instruction, prompt)
+    decision = _route_chat_model(prompt)
+    selected_model = decision.selected_model
+
     # Configure generation parameters based on chat mode
+    config_kwargs = {"stop_sequences": GEMMA_STOP_SEQUENCES}
     if mode == 'instant':
-        config = types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-            system_instruction=system_instruction
-        )
-    else:
-        config = types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(thinking_level="high"),
-            system_instruction=system_instruction
-        )
+        config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+    elif selected_model == MODEL_HEAVY:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="high")
+    config = types.GenerateContentConfig(**config_kwargs)
 
     def generate():
         try:
             response = genai_client.models.generate_content_stream(
-                model='gemma-4-26b-a4b-it',
-                contents=prompt,
+                model=selected_model,
+                contents=merged_prompt,
                 config=config
             )
             for chunk in response:

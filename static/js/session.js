@@ -905,6 +905,20 @@
                 }
             }
         });
+
+        window.addEventListener('project-state-reload', async (e) => {
+            const incomingProjectId = e?.detail?.projectId;
+            const activeProject = localStorage.getItem('activeProjectFilename');
+
+            if (incomingProjectId && activeProject && incomingProjectId !== activeProject) {
+                return;
+            }
+
+            if (window.SessionManager && typeof window.SessionManager.initSession === 'function') {
+                await window.SessionManager.initSession();
+                localStorage.setItem('activeProjectLastSaved', Date.now().toString());
+            }
+        });
     });
 
     // Expose globally

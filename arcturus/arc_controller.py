@@ -8,6 +8,7 @@ from flask import Blueprint, request, Response, stream_with_context
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 # Initialize blueprint
 arc_api = Blueprint('arc_api', __name__)
@@ -25,6 +26,9 @@ for path in ['.env', '../.env', '../../.env']:
 
 api_key = os.getenv("GEMMA_API_KEY")
 genai_client = genai.Client(api_key=api_key) if api_key else None
+GEMMA_STOP_SEQUENCES = ["<end_of_turn>", "<eos>"]
+MODEL_FAST = "models/gemini-3.1-flash-lite"
+MODEL_HEAVY = "models/gemma-4-26b-a4b-it"
 
 SKILL_REGISTRY = {
     "project_manage": "projectManager.md",
@@ -41,6 +45,64 @@ SKILL_REGISTRY = {
     "session_state": "sessionExplainer.md",
     "unclear": "systemPrompt.md"
 }
+
+
+class RouterDecision(BaseModel):
+    complexity: str = Field(
+        description="LOW for simple prompts, HIGH for multi-step math/code/engineering tasks."
+    )
+    selected_model: str = Field(
+        description=f"Must be either {MODEL_FAST} or {MODEL_HEAVY}."
+    )
+    reasoning: str = Field(
+        description="One short sentence explaining route selection."
+    )
+
+
+def compose_gemma_user_prompt(instruction_text: str, user_text: str) -> str:
+    """Gemma-safe format: merge instruction text into the first user turn."""
+    instruction = (instruction_text or "").strip()
+    content = (user_text or "").strip()
+
+    if instruction:
+        return f"Instruction:\n{instruction}\n\nQuestion:\n{content}"
+    return content
+
+
+def route_generation_model(user_prompt: str) -> RouterDecision:
+    """Route prompt to the fastest model or heavy-thinker model using structured output."""
+    router_prompt = f"""Analyze the following user prompt and classify complexity.
+- Select '{MODEL_FAST}' for greetings, small talk, simple explanation, rewrite, translation, or basic Q&A.
+- Select '{MODEL_HEAVY}' for multi-step math, coding, engineering, physics analysis, or complex logic.
+
+User Prompt: {user_prompt}
+"""
+
+    try:
+        route_response = genai_client.models.generate_content(
+            model=MODEL_FAST,
+            contents=router_prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=RouterDecision,
+                temperature=0.0,
+                stop_sequences=GEMMA_STOP_SEQUENCES
+            )
+        )
+        decision = RouterDecision.model_validate_json(route_response.text)
+    except Exception:
+        decision = RouterDecision(
+            complexity="LOW",
+            selected_model=MODEL_FAST,
+            reasoning="Routing fallback: defaulted to fast model."
+        )
+
+    if decision.selected_model not in {MODEL_FAST, MODEL_HEAVY}:
+        decision.selected_model = MODEL_FAST
+        decision.complexity = "LOW"
+        decision.reasoning = "Invalid route output: forced fast model fallback."
+
+    return decision
 
 def get_skill_prompt(intent_label: str) -> str:
     """Loads the specific markdown file for a given intent."""
@@ -109,7 +171,7 @@ def classify_intent(user_input: str) -> str:
 
     return "unclear"
 
-def analyze_and_extract_generator(user_input: str, intent: str):
+def analyze_and_extract_generator(user_input: str, intent: str, model_id: str):
     """Generator for streaming reasoning and JSON parameters extraction."""
     skill_prompt = get_skill_prompt(intent)
     
@@ -132,20 +194,24 @@ def analyze_and_extract_generator(user_input: str, intent: str):
       "parameters": {schema_info}
     }}
     """
+
+    merged_prompt = compose_gemma_user_prompt(unified_prompt, user_input)
     
-    config = types.GenerateContentConfig(
-        system_instruction=unified_prompt,
-        response_mime_type="application/json",
-        thinking_config=types.ThinkingConfig(include_thoughts=True),
-        temperature=0.0
-    )
+    config_kwargs = {
+        "response_mime_type": "application/json",
+        "temperature": 0.0,
+        "stop_sequences": GEMMA_STOP_SEQUENCES
+    }
+    if model_id == MODEL_HEAVY:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
+    config = types.GenerateContentConfig(**config_kwargs)
     
     full_text_buffer = ""
     
     try:
         response_stream = genai_client.models.generate_content_stream(
-            model="gemma-4-26b-a4b-it",
-            contents=user_input,
+            model=model_id,
+            contents=merged_prompt,
             config=config
         )
         
@@ -333,10 +399,10 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
         return
         
     try:
-        # Step 1: Classification
-        yield f"data: {json.dumps({'stream_type': 'status', 'content': 'Classifying intent...'})}\n\n"
+        # Step 1: Classification        
         intent = classify_intent(user_prompt)
-        yield f"data: {json.dumps({'stream_type': 'status', 'content': f'Routed intent: {intent}'})}\n\n"
+        decision = route_generation_model(user_prompt)
+        selected_model = decision.selected_model
         
         # Step 2: Route advice mode vs execution mode
         advice_intents = ["explain", "attenuation", "elevation_stats", "link_margin", "outage_probability", "error", "session_state", "unclear"]
@@ -357,14 +423,17 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
                     except Exception as e:
                         modified_prompt = f"[ERROR LOADING PROJECT CONFIGURATION: {str(e)}]\n\n[USER INSTRUCTION]\n{user_prompt}"
 
-            config = types.GenerateContentConfig(
-                system_instruction=skill_prompt,
-                thinking_config=types.ThinkingConfig(include_thoughts=True),
-                temperature=0.2
-            )
+            config_kwargs = {
+                "temperature": 0.2,
+                "stop_sequences": GEMMA_STOP_SEQUENCES
+            }
+            if selected_model == MODEL_HEAVY:
+                config_kwargs["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
+            config = types.GenerateContentConfig(**config_kwargs)
+            merged_prompt = compose_gemma_user_prompt(skill_prompt, modified_prompt)
             response_stream = genai_client.models.generate_content_stream(
-                model="gemma-4-26b-a4b-it",
-                contents=modified_prompt,
+                model=selected_model,
+                contents=merged_prompt,
                 config=config
             )
             for chunk in response_stream:
@@ -383,7 +452,7 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
         yield f"data: {json.dumps({'stream_type': 'status', 'content': f'Connecting telemetry stream for {intent}...'})}\n\n"
         
         params = {}
-        for item in analyze_and_extract_generator(user_prompt, intent):
+        for item in analyze_and_extract_generator(user_prompt, intent, selected_model):
             if item.get('stream_type') == 'params':
                 params = item.get('content')
             else:

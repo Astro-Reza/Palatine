@@ -119,15 +119,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let latestRequestId = 0;
         let aiState = 'idle';
         let isProcessing = false;
+        let isLoadingModel = false;
+        let isThinking = false;
         let activeRequest = null;
         let thinkingAnimationTimer = null;
+        let thinkingElapsedTimer = null;
         let thinkingFrameIndex = 0;
         let latestPrompt = '';
         let aiChatMode = 'think'; // 'think' or 'instant'
         const aiChatbotModeToggle = document.getElementById('aiChatbotModeToggle');
         const floatingPosition = { left: 16, top: 16 };
         const SNAP_THRESHOLD = 48;
-        const statusLabels = ['Thinking...', 'Reasoning...', 'Processing...'];
         const thinkingFrames = [
             '/static/icons/arcturusAI-animation1.svg',
             '/static/icons/arcturusAI-animation2.svg',
@@ -350,12 +352,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function createReasoningBlock() {
             const reasoning = document.createElement('div');
-            reasoning.className = 'ai-chatbot-reasoning is-open';
-            reasoning.dataset.startedAt = String(Date.now());
+            reasoning.className = 'ai-chatbot-reasoning is-open is-loading';
+            reasoning.dataset.loadingStartedAt = String(Date.now());
             reasoning.innerHTML = `
                 <button class="ai-chatbot-reasoning-trigger" type="button" aria-expanded="true">
                     <img class="ai-chatbot-reasoning-icon" src="${thinkingFrames[0]}" alt="">
-                    <span class="ai-chatbot-reasoning-label is-thinking">Thinking...</span>
+                    <span class="ai-chatbot-reasoning-label is-loading">Loading model...</span>
                     <svg class="ai-chatbot-reasoning-chevron" viewBox="0 0 16 16" aria-hidden="true">
                         <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -363,15 +365,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="ai-chatbot-reasoning-content ai-chatbot-message-content"></div>
             `;
             const content = reasoning.querySelector('.ai-chatbot-reasoning-content');
-            renderMarkdown(
-                content,
-                'Preparing a concise response.\n\n- Reviewing the request\n- Organizing a user-facing summary\n- Keeping the answer safe and explainable'
-            );
             reasoning.querySelector('.ai-chatbot-reasoning-trigger').addEventListener('click', () => {
                 setReasoningOpen(reasoning, !reasoning.classList.contains('is-open'));
             });
+            content.dataset.renderedText = '';
             return reasoning;
         }
+
+        function formatThinkingElapsed(elapsedMs) {
+            const seconds = Math.max(0, elapsedMs / 1000);
+            return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+        }
+
+        function renderThinkingContent(reasoningContent, text) {
+            if (!reasoningContent) return;
+            const nextText = (text && text.trim()) ? text.trim() : '';
+            if (!nextText) return;
+            if (reasoningContent.dataset.renderedText === nextText) return;
+            reasoningContent.dataset.renderedText = nextText;
+            reasoningContent.innerHTML = '';
+            renderMarkdown(reasoningContent, nextText);
+        }
+
+        function setThinkingLabel(reasoning, text) {
+            if (!reasoning) return;
+            const label = reasoning.querySelector('.ai-chatbot-reasoning-label');
+            if (!label) return;
+            if (label.dataset.renderedText === text) return;
+            label.dataset.renderedText = text;
+            label.textContent = text;
+        }
+
+        function beginThinking(reasoning) {
+            if (!reasoning) return;
+            isLoadingModel = false;
+            isThinking = true;
+            reasoning.classList.remove('is-loading');
+            reasoning.classList.add('is-thinking');
+            reasoning.dataset.thinkingStartedAt = String(Date.now());
+            setThinkingLabel(reasoning, 'Thought for 0.0s');
+            startThinkingElapsedTimer(reasoning);
+        }
+
+        function stopThinkingElapsedTimer() {
+            if (!thinkingElapsedTimer) return;
+            window.clearInterval(thinkingElapsedTimer);
+            thinkingElapsedTimer = null;
+        }
+
+        function startThinkingElapsedTimer(reasoning) {
+            stopThinkingElapsedTimer();
+            if (!reasoning) return;
+
+            const startedAt = Number(reasoning.dataset.thinkingStartedAt) || Date.now();
+            const tick = () => {
+                const elapsedMs = Date.now() - startedAt;
+                setThinkingLabel(reasoning, `Thought for ${formatThinkingElapsed(elapsedMs)}`);
+            };
+
+            tick();
+            thinkingElapsedTimer = window.setInterval(tick, 250);
+        }
+
+        window.addEventListener('beforeunload', () => {
+            stopOpenChatbotThinkingAnimation();
+            stopThinkingElapsedTimer();
+        });
 
         function createPendingAssistantMessage() {
             if (!aiChatbotBody) return null;
@@ -386,17 +445,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function completeReasoning(reasoning) {
             if (!reasoning) return;
-            const startedAt = Number(reasoning.dataset.startedAt);
-            const durationSeconds = Number.isFinite(startedAt)
-                ? Math.ceil((Date.now() - startedAt) / 1000)
-                : null;
-            const label = reasoning.querySelector('.ai-chatbot-reasoning-label');
-            if (label) {
-                label.classList.remove('is-thinking');
-                label.textContent = durationSeconds === null
-                    ? 'Thought for a few seconds'
-                    : `Thought for ${durationSeconds} seconds`;
+            if (!activeRequest?.thinkingStarted) {
+                reasoning.remove();
+                isLoadingModel = false;
+                isThinking = false;
+                return;
             }
+            const startedAt = Number(reasoning.dataset.thinkingStartedAt);
+            const durationText = Number.isFinite(startedAt)
+                ? formatThinkingElapsed(Date.now() - startedAt)
+                : null;
+            stopThinkingElapsedTimer();
+            isThinking = false;
+            setThinkingLabel(
+                reasoning,
+                durationText === null
+                    ? 'Thought for a few seconds'
+                    : `Thought for ${durationText}`
+            );
+            const label = reasoning.querySelector('.ai-chatbot-reasoning-label');
+            if (label) label.classList.remove('is-thinking');
             window.setTimeout(() => setReasoningOpen(reasoning, false), 1000);
         }
 
@@ -407,20 +475,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        function startOpenChatbotThinkingAnimation(icons = [], textNodes = []) {
+        function startOpenChatbotThinkingAnimation(icons = []) {
             stopOpenChatbotThinkingAnimation();
             thinkingFrameIndex = 0;
             
             const updateFrames = () => {
                 const iconSrc = thinkingFrames[thinkingFrameIndex];
                 icons.forEach(icon => { if (icon) icon.src = iconSrc; });
-                
-                const dots = '.'.repeat(thinkingFrameIndex);
-                textNodes.forEach(node => {
-                    if (node) {
-                        node.textContent = 'Processing' + dots;
-                    }
-                });
             };
 
             updateFrames();
@@ -428,17 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 thinkingFrameIndex = (thinkingFrameIndex + 1) % thinkingFrames.length;
                 updateFrames();
             }, 250);
-        }
-
-        function appendThinkingRow(text, parent = aiChatbotBody) {
-            if (!parent) return null;
-            const row = document.createElement('div');
-            row.className = 'chatbot-thinking-row';
-            row.innerHTML = `<span class="chatbot-thinking-text"></span>`;
-            row.querySelector('.chatbot-thinking-text').textContent = text;
-            parent.appendChild(row);
-            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
-            return row;
         }
 
         function setProcessingState(processing) {
@@ -477,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const label = reasoning.querySelector('.ai-chatbot-reasoning-label');
             if (label) {
                 label.classList.remove('is-thinking');
-                label.textContent = 'Stopped';
+                label.textContent = activeRequest?.thinkingStarted ? 'Stopped' : 'Loading canceled';
             }
             window.setTimeout(() => setReasoningOpen(reasoning, false), 1000);
         }
@@ -485,12 +535,12 @@ document.addEventListener('DOMContentLoaded', () => {
         function stopActiveResponse() {
             if (!isProcessing || !activeRequest) return;
 
-            const { controller, reasoning, responseContent, thinkingRow } = activeRequest;
+            const { controller, reasoning, responseContent } = activeRequest;
             latestRequestId += 1;
             controller.abort();
             stopOpenChatbotThinkingAnimation();
-            if (thinkingRow) thinkingRow.remove();
-            stopReasoning(reasoning);
+            stopThinkingElapsedTimer();
+                if (reasoning) stopReasoning(reasoning);
             if (responseContent) {
                 responseContent.innerHTML = '';
                 renderMarkdown(responseContent, 'Generation stopped.');
@@ -509,6 +559,8 @@ document.addEventListener('DOMContentLoaded', () => {
             aiState = 'thinking';
             setLauncherState('thinking');
             setProcessingState(true);
+            isLoadingModel = true;
+            isThinking = false;
 
             const message = document.createElement('div');
             message.className = 'ai-chatbot-message assistant';
@@ -518,7 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (aiChatMode === 'think') {
                 reasoning = createReasoningBlock();
                 reasoningContent = reasoning.querySelector('.ai-chatbot-reasoning-content');
-                reasoningContent.innerHTML = ''; // clear default
                 message.appendChild(reasoning);
             }
             
@@ -527,13 +578,22 @@ document.addEventListener('DOMContentLoaded', () => {
             message.appendChild(responseContent);
 
             aiChatbotBody.appendChild(message);
-            const thinkingRow = appendThinkingRow('Processing', message);
-            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
 
             const rIcon = reasoning?.querySelector('.ai-chatbot-reasoning-icon');
-            const tText = thinkingRow?.querySelector('.chatbot-thinking-text');
-            startOpenChatbotThinkingAnimation([rIcon], [tText]);
-            activeRequest = { requestId, controller, message, reasoning, responseContent, thinkingRow };
+            startOpenChatbotThinkingAnimation([rIcon]);
+            if (reasoning) {
+                setReasoningOpen(reasoning, true);
+            }
+            activeRequest = {
+                requestId,
+                controller,
+                message,
+                reasoning,
+                responseContent,
+                thinkingStarted: false,
+                currentThinkText: '',
+                currentMainText: ''
+            };
 
             let fullRawText = '';
 
@@ -575,32 +635,30 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (data.error) throw new Error(data.error);
                                 
                                 if (data.stream_type === 'thought') {
+                                    if (activeRequest && !activeRequest.thinkingStarted) {
+                                        activeRequest.thinkingStarted = true;
+                                        if (reasoning) {
+                                            beginThinking(reasoning);
+                                        }
+                                    }
                                     currentThinkText += data.content;
+                                    if (activeRequest) activeRequest.currentThinkText = currentThinkText;
                                     if (reasoningContent) {
-                                        reasoningContent.innerHTML = '';
-                                        renderMarkdown(reasoningContent, currentThinkText.trim() || 'Thinking...');
+                                        renderThinkingContent(reasoningContent, currentThinkText);
                                     }
                                 } else if (data.stream_type === 'summary') {
                                     currentMainText += data.content;
+                                    if (activeRequest) activeRequest.currentMainText = currentMainText;
                                     responseContent.innerHTML = '';
                                     renderMarkdown(responseContent, currentMainText.trim());
                                 } else if (data.stream_type === 'status') {
                                     console.log('Arcturus Status:', data.content);
-                                    if (tText) {
-                                        tText.textContent = data.content;
-                                    }
                                 } else if (data.stream_type === 'success') {
                                     console.log('Arcturus Success Signal: Synchronizing UI state...');
-                                    if (window.SessionManager && typeof window.SessionManager.initSession === 'function') {
-                                        window.SessionManager.initSession().then(() => {
-                                            localStorage.setItem('activeProjectLastSaved', Date.now().toString());
-                                            const reloadEvent = new CustomEvent('project-state-reload', {
-                                                detail: { projectId: activeProject }
-                                            });
-                                            window.dispatchEvent(reloadEvent);
-                                            document.dispatchEvent(reloadEvent);
-                                        });
-                                    }
+                                    const reloadEvent = new CustomEvent('project-state-reload', {
+                                        detail: { projectId: activeProject }
+                                    });
+                                    window.dispatchEvent(reloadEvent);
                                 } else if (data.stream_type === 'error') {
                                     throw new Error(data.content);
                                 }
@@ -617,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (requestId !== latestRequestId) return;
                 
                 stopOpenChatbotThinkingAnimation();
-                if (thinkingRow) thinkingRow.remove();
+                isLoadingModel = false;
                 if (reasoning) completeReasoning(reasoning);
 
                 aiState = 'success';
@@ -632,7 +690,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (requestId !== latestRequestId) return;
                 console.error(err);
                 stopOpenChatbotThinkingAnimation();
-                if (thinkingRow) thinkingRow.remove();
+                stopThinkingElapsedTimer();
+                isLoadingModel = false;
+                isThinking = false;
                 if (reasoning) completeReasoning(reasoning);
 
                 aiState = 'failed';
