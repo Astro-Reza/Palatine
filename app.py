@@ -315,6 +315,7 @@ from google import genai
 from google.genai import types
 from flask import Response, stream_with_context
 from pydantic import BaseModel, Field
+from arcturus.chat_memory import chat_memory
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(env_path)
@@ -348,12 +349,14 @@ def _build_gemma_user_prompt(system_text, user_text):
     return question
 
 
-def _route_chat_model(user_prompt: str) -> RouterDecision:
+def _route_chat_model(user_prompt: str, chat_context: str = "") -> RouterDecision:
+    context_block = f"\n\nRecent chat context:\n{chat_context.strip()}" if chat_context.strip() else ""
     router_prompt = f"""Analyze the following user prompt and classify complexity.
 - Select '{MODEL_FAST}' for greetings, small talk, simple explanation, rewrite, translation, or basic Q&A.
 - Select '{MODEL_HEAVY}' for multi-step math, coding, engineering, physics analysis, or complex logic.
 
 User Prompt: {user_prompt}
+{context_block}
 """
 
     try:
@@ -390,6 +393,8 @@ def chat():
     data = request.json or {}
     prompt = data.get('prompt', '')
     mode = data.get('mode', 'think')
+    project_id = data.get('project_id') or 'default_chat'
+    chat_id = data.get('chat_id') or 'chat_session_default'
     
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
@@ -404,8 +409,12 @@ def chat():
         except Exception as e:
             print(f"Warning: Failed to load systemPrompt.md: {e}")
 
-    merged_prompt = _build_gemma_user_prompt(system_instruction, prompt)
-    decision = _route_chat_model(prompt)
+    chat_memory.create_session(project_id, chat_id)
+    chat_context = chat_memory.build_history_context(project_id, chat_id)
+    prompt_with_context = f"{chat_context}\n\n[NEW USER PROMPT]\n{prompt}".strip() if chat_context else prompt
+
+    merged_prompt = _build_gemma_user_prompt(system_instruction, prompt_with_context)
+    decision = _route_chat_model(prompt, chat_context)
     selected_model = decision.selected_model
 
     # Configure generation parameters based on chat mode
@@ -418,6 +427,7 @@ def chat():
 
     def generate():
         try:
+            assistant_text = ""
             response = genai_client.models.generate_content_stream(
                 model=selected_model,
                 contents=merged_prompt,
@@ -437,9 +447,12 @@ def chat():
                                 payload['thought'] = part.text
                             else:
                                 payload['text'] = part.text
+                                assistant_text += part.text
                                 
                             yield f"data: {json.dumps(payload)}\n\n"
             yield "data: [DONE]\n\n"
+            if assistant_text.strip():
+                chat_memory.append_turn(project_id, chat_id, prompt, assistant_text.strip())
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 

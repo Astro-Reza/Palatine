@@ -127,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let thinkingFrameIndex = 0;
         let latestPrompt = '';
         let aiChatMode = 'think'; // 'think' or 'instant'
+        let activeChatId = null;
+        let activeChatProjectId = null;
         const aiChatbotModeToggle = document.getElementById('aiChatbotModeToggle');
         const floatingPosition = { left: 16, top: 16 };
         const SNAP_THRESHOLD = 48;
@@ -280,6 +282,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+                if (headingMatch) {
+                    flushParagraph();
+                    flushList();
+                    const level = headingMatch[1].length;
+                    const heading = document.createElement(`h${level}`);
+                    appendInlineMarkdown(heading, headingMatch[2]);
+                    container.appendChild(heading);
+                    return;
+                }
+
                 if (/^[-*]\s+/.test(line)) {
                     flushParagraph();
                     if (!list) {
@@ -384,7 +397,37 @@ document.addEventListener('DOMContentLoaded', () => {
             if (reasoningContent.dataset.renderedText === nextText) return;
             reasoningContent.dataset.renderedText = nextText;
             reasoningContent.innerHTML = '';
-            renderMarkdown(reasoningContent, nextText);
+            
+            const blocks = nextText.split(/\n+/).filter(b => b.trim().length > 0);
+            
+            blocks.forEach((block, index) => {
+                const isLast = index === blocks.length - 1;
+                const step = document.createElement('div');
+                step.className = `ai-chatbot-thought-step ${isLast ? 'active' : 'complete'}`;
+                
+                const iconCol = document.createElement('div');
+                iconCol.className = 'ai-chatbot-thought-icon-col';
+                
+                const dot = document.createElement('div');
+                dot.className = 'ai-chatbot-thought-dot';
+                iconCol.appendChild(dot);
+                
+                const line = document.createElement('div');
+                line.className = 'ai-chatbot-thought-line';
+                iconCol.appendChild(line);
+                
+                const contentCol = document.createElement('div');
+                contentCol.className = 'ai-chatbot-thought-content';
+                
+                renderMarkdown(contentCol, block);
+                
+                step.appendChild(iconCol);
+                step.appendChild(contentCol);
+                reasoningContent.appendChild(step);
+            });
+
+            // Keep scrolled to bottom during streaming
+            reasoningContent.scrollTop = reasoningContent.scrollHeight;
         }
 
         function setThinkingLabel(reasoning, text) {
@@ -599,10 +642,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const activeProject = window.SessionManager ? window.SessionManager.getMeta().filename : null;
+                const chatSessionId = await ensureChatSession();
                 const response = await fetch('/api/arcturus/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, project_id: activeProject }),
+                    body: JSON.stringify({ prompt: text, project_id: activeProject, chat_id: chatSessionId }),
                     signal: controller.signal
                 });
 
@@ -679,6 +723,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reasoning) completeReasoning(reasoning);
 
                 aiState = 'success';
+                if (chatHistoryModal && chatHistoryModal.style.display === 'flex') {
+                    refreshChatHistoryModal();
+                }
                 
                 message.appendChild(createMessageActions(currentMainText.trim(), text));
                 aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
@@ -800,11 +847,250 @@ document.addEventListener('DOMContentLoaded', () => {
             aiCloseBtn.addEventListener('click', closeChatbot);
         }
 
-        if (aiChatbotReopen) {
-            aiChatbotReopen.addEventListener('click', () => {
-                if (aiChatbot.hidden) openChatbot();
+        /* ── Arcturus Drop-up Menu + Chat History Modal ── */
+        const aiDropup = document.getElementById('aiChatbotDropup');
+        const aiDropupNewChat = document.getElementById('aiDropupNewChat');
+        const aiDropupPrevChat = document.getElementById('aiDropupPrevChat');
+        const chatHistoryModal = document.getElementById('chatHistoryModal');
+        const chatHistoryCloseBtn = document.getElementById('chatHistoryCloseBtn');
+        const chatHistoryDeleteAllBtn = document.getElementById('chatHistoryDeleteAllBtn');
+        const chatHistoryList = document.getElementById('chatHistoryList');
+        const chatHistoryEmptyState = document.getElementById('chatHistoryEmptyState');
+
+        function getActiveProjectId() {
+            return window.SessionManager ? window.SessionManager.getMeta().filename : null;
+        }
+
+        function getChatStorageKey(projectId) {
+            return `arcturusActiveChatId:${projectId || 'default'}`;
+        }
+
+        function loadActiveChatId(projectId) {
+            if (!projectId) return null;
+            return localStorage.getItem(getChatStorageKey(projectId));
+        }
+
+        function saveActiveChatId(projectId, chatId) {
+            if (!projectId || !chatId) return;
+            localStorage.setItem(getChatStorageKey(projectId), chatId);
+            activeChatId = chatId;
+            activeChatProjectId = projectId;
+        }
+
+        function clearChatTranscript() {
+            if (aiChatbotBody) aiChatbotBody.innerHTML = '';
+        }
+
+        function appendChatMessage(role, text) {
+            if (!aiChatbotBody) return;
+            const message = document.createElement('div');
+            message.className = `ai-chatbot-message ${role}`;
+            const content = document.createElement('div');
+            content.className = 'ai-chatbot-message-content';
+            renderMarkdown(content, text || '');
+            message.appendChild(content);
+            aiChatbotBody.appendChild(message);
+        }
+
+        function renderChatTranscript(history) {
+            clearChatTranscript();
+            const messages = Array.isArray(history) ? history : [];
+            if (!messages.length) {
+                appendChatMessage('assistant', 'Telemetry sync is active. I can help review constellation changes and orbital parameters.');
+                return;
+            }
+            messages.forEach((message) => {
+                const role = message?.role === 'model' ? 'assistant' : 'user';
+                const text = Array.isArray(message?.parts) && message.parts[0] ? (message.parts[0].text || '') : '';
+                if (text.trim()) appendChatMessage(role, text);
+            });
+            aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
+        }
+
+        async function ensureChatSession() {
+            const projectId = getActiveProjectId();
+            if (!projectId) return null;
+            if (activeChatId && activeChatProjectId === projectId) return activeChatId;
+
+            const savedChatId = loadActiveChatId(projectId);
+            if (savedChatId) {
+                activeChatId = savedChatId;
+                activeChatProjectId = projectId;
+                return savedChatId;
+            }
+
+            const response = await fetch('/api/arcturus/chats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_id: projectId })
+            });
+
+            if (!response.ok) return null;
+            const data = await response.json();
+            activeChatId = data.chat_id;
+            activeChatProjectId = projectId;
+            saveActiveChatId(projectId, activeChatId);
+            return activeChatId;
+        }
+
+        async function loadChatSession(chatId) {
+            const projectId = getActiveProjectId();
+            if (!projectId || !chatId) return;
+
+            const response = await fetch(`/api/arcturus/chats/${encodeURIComponent(projectId)}/${encodeURIComponent(chatId)}`);
+            if (!response.ok) return;
+
+            const data = await response.json();
+            activeChatId = chatId;
+            activeChatProjectId = projectId;
+            saveActiveChatId(projectId, chatId);
+            renderChatTranscript(data.history || []);
+        }
+
+        async function refreshChatHistoryModal() {
+            if (!chatHistoryList || !chatHistoryEmptyState) return;
+            const projectId = getActiveProjectId();
+            if (!projectId) return;
+
+            if ((!activeChatId || activeChatProjectId !== projectId) && loadActiveChatId(projectId)) {
+                activeChatId = loadActiveChatId(projectId);
+                activeChatProjectId = projectId;
+            }
+
+            const response = await fetch(`/api/arcturus/chats?project_id=${encodeURIComponent(projectId)}`);
+            if (!response.ok) return;
+
+            const sessions = await response.json();
+            chatHistoryList.innerHTML = '';
+
+            if (!sessions.length) {
+                chatHistoryEmptyState.style.display = 'flex';
+                return;
+            }
+
+            chatHistoryEmptyState.style.display = 'none';
+            sessions.forEach((session) => {
+                const item = document.createElement('div');
+                item.className = `chat-history-item${session.chat_id === activeChatId ? ' is-active' : ''}`;
+                item.innerHTML = `
+                    <div class="chat-history-item-main">
+                        <span class="chat-history-item-title">${session.title || session.chat_id}</span>
+                        <span class="chat-history-item-meta">${session.message_count || 0} messages</span>
+                    </div>
+                    <div class="chat-history-item-actions">
+                        <button type="button" class="chat-history-item-delete" title="Delete chat">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                // The whole item acts as the "Open" button
+                item.addEventListener('click', async () => {
+                    closeDropup();
+                    await loadChatSession(session.chat_id);
+                    if (chatHistoryModal) chatHistoryModal.style.display = 'none';
+                    if (aiChatbot.hidden) openChatbot();
+                });
+
+                item.querySelector('.chat-history-item-delete').addEventListener('click', async (e) => {
+                    e.stopPropagation(); // Prevents the item click from triggering when clicking delete
+                    const ok = window.confirm('Delete this chat session?');
+                    if (!ok) return;
+                    await fetch(`/api/arcturus/chats/${encodeURIComponent(projectId)}/${encodeURIComponent(session.chat_id)}`, { method: 'DELETE' });
+                    if (activeChatId === session.chat_id) activeChatId = null;
+                    await refreshChatHistoryModal();
+                    if (activeChatId) {
+                        await loadChatSession(activeChatId);
+                    } else {
+                        renderChatTranscript([]);
+                    }
+                });
+
+                chatHistoryList.appendChild(item);
             });
         }
+
+        async function deleteAllChatHistory() {
+            const projectId = getActiveProjectId();
+            if (!projectId) return;
+            const ok = window.confirm('Delete all chat history for this project?');
+            if (!ok) return;
+            await fetch(`/api/arcturus/chats/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
+            activeChatId = null;
+            activeChatProjectId = null;
+            renderChatTranscript([]);
+            await refreshChatHistoryModal();
+        }
+
+        function closeDropup() {
+            if (aiDropup) aiDropup.classList.remove('is-open');
+        }
+
+        if (aiChatbotReopen) {
+            aiChatbotReopen.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (aiDropup) aiDropup.classList.toggle('is-open');
+            });
+        }
+
+        if (aiDropupNewChat) {
+            aiDropupNewChat.addEventListener('click', () => {
+                closeDropup();
+                const projectId = getActiveProjectId();
+                if (!projectId) return;
+                fetch('/api/arcturus/chats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project_id: projectId })
+                }).then(async (response) => {
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    activeChatId = data.chat_id;
+                    saveActiveChatId(projectId, activeChatId);
+                    renderChatTranscript([]);
+                    if (aiChatbot.hidden) openChatbot();
+                });
+            });
+        }
+
+        if (aiDropupPrevChat) {
+            aiDropupPrevChat.addEventListener('click', () => {
+                closeDropup();
+                if (chatHistoryModal) chatHistoryModal.style.display = 'flex';
+                refreshChatHistoryModal();
+            });
+        }
+
+        if (chatHistoryDeleteAllBtn) {
+            chatHistoryDeleteAllBtn.addEventListener('click', deleteAllChatHistory);
+        }
+
+        if (chatHistoryCloseBtn) {
+            chatHistoryCloseBtn.addEventListener('click', () => {
+                if (chatHistoryModal) chatHistoryModal.style.display = 'none';
+            });
+        }
+
+        if (chatHistoryModal) {
+            chatHistoryModal.addEventListener('click', (e) => {
+                if (e.target === chatHistoryModal) chatHistoryModal.style.display = 'none';
+            });
+        }
+
+        // Close the drop-up when clicking anywhere outside
+        document.addEventListener('click', (e) => {
+            if (aiDropup && aiDropup.classList.contains('is-open')) {
+                const launcher = document.getElementById('aiChatbotLauncher');
+                if (launcher && !launcher.contains(e.target)) {
+                    closeDropup();
+                }
+            }
+        });
 
         if (aiMinimizeBtn) {
             aiMinimizeBtn.addEventListener('click', minimizeChatbot);

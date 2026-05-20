@@ -4,11 +4,12 @@ import json
 import math
 import yaml
 from datetime import datetime, timezone
-from flask import Blueprint, request, Response, stream_with_context
+from flask import Blueprint, request, Response, stream_with_context, jsonify
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+from arcturus.chat_memory import chat_memory
 
 # Initialize blueprint
 arc_api = Blueprint('arc_api', __name__)
@@ -69,13 +70,15 @@ def compose_gemma_user_prompt(instruction_text: str, user_text: str) -> str:
     return content
 
 
-def route_generation_model(user_prompt: str) -> RouterDecision:
+def route_generation_model(user_prompt: str, chat_context: str = "") -> RouterDecision:
     """Route prompt to the fastest model or heavy-thinker model using structured output."""
+    context_block = f"\n\nRecent chat context:\n{chat_context.strip()}" if chat_context.strip() else ""
     router_prompt = f"""Analyze the following user prompt and classify complexity.
 - Select '{MODEL_FAST}' for greetings, small talk, simple explanation, rewrite, translation, or basic Q&A.
 - Select '{MODEL_HEAVY}' for multi-step math, coding, engineering, physics analysis, or complex logic.
 
 User Prompt: {user_prompt}
+{context_block}
 """
 
     try:
@@ -125,7 +128,7 @@ def classify_intent(user_input: str) -> str:
         return "project_manage"
 
     # Session state
-    if any(kw in text for kw in ["status", "configured", "what have", "current state", "show session"]):
+    if any(kw in text for kw in ["status", "configured", "what have", "current state", "show session", "current constellation", "existing constellation"]):
         return "session_state"
 
     # Constellation editing (broad keyword net)
@@ -166,15 +169,27 @@ def classify_intent(user_input: str) -> str:
         return "outage_probability"
 
     # Explain / general knowledge
-    if any(kw in text for kw in ["explain", "what is", "how do", "define", "tell me about", "describe"]):
+    if any(kw in text for kw in ["explain", "what is", "how do", "define", "tell me about", "describe", "analyze"]):
         return "explain"
 
     return "unclear"
 
-def analyze_and_extract_generator(user_input: str, intent: str, model_id: str):
+def analyze_and_extract_generator(user_input: str, intent: str, model_id: str, session_id: str = None, chat_context: str = ""):
     """Generator for streaming reasoning and JSON parameters extraction."""
     skill_prompt = get_skill_prompt(intent)
     
+    context_str = ""
+    if session_id:
+        projects_dir = os.path.abspath(os.path.join(PROJECT_ROOT, 'database', 'projects'))
+        filename = session_id if session_id.endswith('.yaml') else f"{session_id}.yaml"
+        filepath = os.path.join(projects_dir, filename)
+        if os.path.exists(filepath):
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    context_str = f"\n\n[CURRENT PROJECT CONFIGURATION]\n{f.read()}"
+            except Exception:
+                pass
+
     schema_info = ""
     if intent == "constellation_edit":
         schema_info = '{"action": "add"|"remove"|"edit", "name": string, "apogee": int, "perigee": int, "inclination": float, "planes": int, "sats_per_plane": int, "beam_quantity": int, "beam_size": int}'
@@ -185,7 +200,7 @@ def analyze_and_extract_generator(user_input: str, intent: str, model_id: str):
     else:
         schema_info = '{}'
 
-    unified_prompt = f"""{skill_prompt}
+    unified_prompt = f"""{skill_prompt}{context_str}
 
     [CRITICAL INSTRUCTION]
     You must output ONLY a single JSON object in the following format. Do not write any explanations before or after the JSON:
@@ -195,7 +210,8 @@ def analyze_and_extract_generator(user_input: str, intent: str, model_id: str):
     }}
     """
 
-    merged_prompt = compose_gemma_user_prompt(unified_prompt, user_input)
+    contextual_input = f"{chat_context.strip()}\n\n{user_input}".strip() if chat_context.strip() else user_input
+    merged_prompt = compose_gemma_user_prompt(unified_prompt, contextual_input)
     
     config_kwargs = {
         "response_mime_type": "application/json",
@@ -392,16 +408,21 @@ def compute_live_link_budget(project_id: str, station_name: str, const_id: str, 
         "status": status
     }
 
-def execute_pipeline_generator(user_prompt: str, session_id: str):
+def execute_pipeline_generator(user_prompt: str, session_id: str, chat_id: str | None = None):
     """Primary pipeline coordination. Classification -> Param Extraction -> Live Execution -> Summary."""
     if not genai_client:
         yield f"data: {json.dumps({'stream_type': 'error', 'content': 'Arcturus is unconfigured. GEMMA_API_KEY is missing.'})}\n\n"
         return
+
+    active_chat_id = chat_id or "chat_session_default"
+    chat_memory.create_session(session_id, active_chat_id)
+    chat_context = chat_memory.build_history_context(session_id, active_chat_id)
+    prompt_with_context = f"{chat_context}\n\n[NEW USER PROMPT]\n{user_prompt}".strip() if chat_context else user_prompt
         
     try:
         # Step 1: Classification        
         intent = classify_intent(user_prompt)
-        decision = route_generation_model(user_prompt)
+        decision = route_generation_model(user_prompt, chat_context)
         selected_model = decision.selected_model
         
         # Step 2: Route advice mode vs execution mode
@@ -410,8 +431,8 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
         if intent in advice_intents:
             skill_prompt = get_skill_prompt(intent)
             
-            modified_prompt = user_prompt
-            if intent == "session_state":
+            modified_prompt = prompt_with_context
+            if session_id:
                 projects_dir = os.path.abspath(os.path.join(PROJECT_ROOT, 'database', 'projects'))
                 filename = session_id if session_id.endswith('.yaml') else f"{session_id}.yaml"
                 filepath = os.path.join(projects_dir, filename)
@@ -419,9 +440,9 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
                     try:
                         with open(filepath, 'r', encoding='utf-8') as f:
                             yaml_content = f.read()
-                        modified_prompt = f"[CURRENT PROJECT CONFIGURATION]\n{yaml_content}\n\n[USER INSTRUCTION]\n{user_prompt}"
+                        modified_prompt = f"{chat_context}\n\n[CURRENT PROJECT CONFIGURATION]\n{yaml_content}\n\n[USER INSTRUCTION]\n{user_prompt}".strip() if chat_context else f"[CURRENT PROJECT CONFIGURATION]\n{yaml_content}\n\n[USER INSTRUCTION]\n{user_prompt}"
                     except Exception as e:
-                        modified_prompt = f"[ERROR LOADING PROJECT CONFIGURATION: {str(e)}]\n\n[USER INSTRUCTION]\n{user_prompt}"
+                        modified_prompt = f"{chat_context}\n\n[ERROR LOADING PROJECT CONFIGURATION: {str(e)}]\n\n[USER INSTRUCTION]\n{user_prompt}".strip() if chat_context else f"[ERROR LOADING PROJECT CONFIGURATION: {str(e)}]\n\n[USER INSTRUCTION]\n{user_prompt}"
 
             config_kwargs = {
                 "temperature": 0.2,
@@ -436,6 +457,7 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
                 contents=merged_prompt,
                 config=config
             )
+            assistant_text = ""
             for chunk in response_stream:
                 if not chunk.candidates or not chunk.candidates[0].content.parts:
                     continue
@@ -445,14 +467,18 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
                     if getattr(part, 'thought', False):
                         yield f"data: {json.dumps({'stream_type': 'thought', 'content': part.text})}\n\n"
                     else:
+                        assistant_text += part.text
                         yield f"data: {json.dumps({'stream_type': 'summary', 'content': part.text})}\n\n"
+
+            if assistant_text.strip():
+                chat_memory.append_turn(session_id, active_chat_id, user_prompt, assistant_text.strip())
             return
 
         # Extraction phase for structured actions
         yield f"data: {json.dumps({'stream_type': 'status', 'content': f'Connecting telemetry stream for {intent}...'})}\n\n"
         
         params = {}
-        for item in analyze_and_extract_generator(user_prompt, intent, selected_model):
+        for item in analyze_and_extract_generator(user_prompt, intent, selected_model, session_id, chat_context=chat_context):
             if item.get('stream_type') == 'params':
                 params = item.get('content')
             else:
@@ -586,10 +612,14 @@ def execute_pipeline_generator(user_prompt: str, session_id: str):
         # Step 4: Deterministic summary (no API call — instant)
         summary_text = generate_template_summary(intent, execution_data)
         yield f"data: {json.dumps({'stream_type': 'summary', 'content': summary_text})}\n\n"
+        assistant_text = summary_text
 
         # Step 5: Send final success signal (State Sync Trigger)
         if execution_data.get("status") == "success":
             yield f"data: {json.dumps({'stream_type': 'success', 'content': 'Project state updated successfully'})}\n\n"
+
+        if assistant_text.strip():
+            chat_memory.append_turn(session_id, active_chat_id, user_prompt, assistant_text.strip())
 
     except Exception as e:
         yield f"data: {json.dumps({'stream_type': 'error', 'content': f'Pipeline processing failure: {str(e)}'})}\n\n"
@@ -600,6 +630,7 @@ def stream_arcturus_pipeline():
     payload = request.get_json() or {}
     user_prompt = payload.get('prompt')
     session_id = payload.get('project_id')
+    chat_id = payload.get('chat_id')
     
     if not user_prompt:
         return Response("data: {\"error\": \"prompt is required\"}\n\n", mimetype='text/event-stream')
@@ -607,6 +638,38 @@ def stream_arcturus_pipeline():
         return Response("data: {\"error\": \"project_id is required\"}\n\n", mimetype='text/event-stream')
         
     return Response(
-        stream_with_context(execute_pipeline_generator(user_prompt, session_id)), 
+        stream_with_context(execute_pipeline_generator(user_prompt, session_id, chat_id=chat_id)), 
         mimetype='text/event-stream'
     )
+
+
+@arc_api.route('/api/arcturus/chats', methods=['GET', 'POST'])
+def arcturus_chat_sessions():
+    if request.method == 'GET':
+        project_id = request.args.get('project_id')
+        if not project_id:
+            return jsonify({"error": "project_id is required"}), 400
+        return jsonify(chat_memory.list_sessions(project_id)), 200
+
+    payload = request.get_json() or {}
+    project_id = payload.get('project_id')
+    if not project_id:
+        return jsonify({"error": "project_id is required"}), 400
+
+    chat_id = chat_memory.create_session(project_id, payload.get('chat_id'), payload.get('title'))
+    return jsonify({"chat_id": chat_id, "sessions": chat_memory.list_sessions(project_id)}), 201
+
+
+@arc_api.route('/api/arcturus/chats/<project_id>/<chat_id>', methods=['GET', 'DELETE'])
+def arcturus_chat_session(project_id, chat_id):
+    if request.method == 'GET':
+        return jsonify({"chat_id": chat_id, "history": chat_memory.get_chat_history(project_id, chat_id)}), 200
+
+    chat_memory.delete_session(project_id, chat_id)
+    return jsonify({"message": "Chat session deleted"}), 200
+
+
+@arc_api.route('/api/arcturus/chats/<project_id>', methods=['DELETE'])
+def arcturus_delete_all_chat_history(project_id):
+    chat_memory.delete_session(project_id, None)
+    return jsonify({"message": "All chat history deleted"}), 200
