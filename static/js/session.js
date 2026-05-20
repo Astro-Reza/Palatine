@@ -206,21 +206,11 @@
     function clearCurrentSession() {
         // Clear orbit manager
         if (window.orbitManager) {
-            window.orbitManager.constellations = [];
-            if (window.orbitManager.scene) {
-                // Find and remove all constellation-related objects
-                const toRemove = [];
-                window.orbitManager.scene.traverse(obj => {
-                    if (obj.isPoints || obj.isGroup || obj.isInstancedMesh) {
-                        // This is a bit aggressive, but orbitManager should have better cleanup
-                    }
-                });
-                // Re-init scene is safer if removeConstellation isn't enough
-                // But let's use the provided removeConstellation if possible
-            }
-            // Better way: use existing removeConstellation until empty
             while (window.orbitManager.constellations.length > 0) {
                 window.orbitManager.removeConstellation(0);
+            }
+            if (typeof window.orbitManager.setGroundStations === 'function') {
+                window.orbitManager.setGroundStations([]);
             }
         }
         // Clear DOM
@@ -323,6 +313,11 @@
                 
                 window.islRenderTree();
             }
+
+            // Trigger 2D redraw if applicable
+            if (window.orbitManager && window.orbitManager.mode === '2D' && typeof window.orbitManager.draw2D === 'function') {
+                window.orbitManager.draw2D();
+            }
         } else if (isGroundSystem) {
             // Rebuild Ground Stations
             const groundStations = projectData.ground_stations || [];
@@ -383,6 +378,11 @@
 
                     constPanelWrapper.appendChild(card);
                 });
+            }
+
+            // Refresh ground station rendering
+            if (typeof window.updateGroundStationsRender === 'function') {
+                window.updateGroundStationsRender();
             }
         }
 
@@ -582,6 +582,7 @@
                     const result = await resp.json();
                     _currentFilename = result.filename;
                     localStorage.setItem('activeProjectFilename', _currentFilename);
+                    localStorage.setItem('activeProjectLastSaved', Date.now().toString());
                     return true;
                 }
             } catch (err) {
@@ -625,6 +626,7 @@
                     if (nameInput) nameInput.value = _projectMeta.name;
                     
                     localStorage.setItem('activeProjectFilename', _currentFilename);
+                    localStorage.setItem('activeProjectLastSaved', Date.now().toString());
                 }
             } catch (err) {
                 console.error('initSession error:', err);
@@ -893,6 +895,16 @@
                 if (e.key === 'Enter') nameInput.blur();
             });
         }
+
+        // Cross-tab project state synchronization
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'activeProjectLastSaved') {
+                console.log('Project state updated in another tab/process, reloading...');
+                if (window.SessionManager && typeof window.SessionManager.initSession === 'function') {
+                    window.SessionManager.initSession();
+                }
+            }
+        });
     });
 
     // Expose globally

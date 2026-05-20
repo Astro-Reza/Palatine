@@ -6,6 +6,9 @@ from flask import Flask, render_template, send_from_directory, abort, request, j
 
 app = Flask(__name__, template_folder='templates', static_url_path='/none')
 
+from arcturus.arc_controller import arc_api
+app.register_blueprint(arc_api)
+
 V2_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'))
 V1_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Palatine 1.0', 'static'))
 DATABASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'database'))

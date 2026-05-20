@@ -538,10 +538,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let fullRawText = '';
 
             try {
-                const response = await fetch('/api/chat', {
+                const activeProject = window.SessionManager ? window.SessionManager.getMeta().filename : null;
+                const response = await fetch('/api/arcturus/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, mode: aiChatMode }),
+                    body: JSON.stringify({ prompt: text, project_id: activeProject }),
                     signal: controller.signal
                 });
 
@@ -573,20 +574,37 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const data = JSON.parse(dataStr);
                                 if (data.error) throw new Error(data.error);
                                 
-                                if (data.thought) {
-                                    currentThinkText += data.thought;
-                                } else if (data.text) {
-                                    currentMainText += data.text;
+                                if (data.stream_type === 'thought') {
+                                    currentThinkText += data.content;
+                                    if (reasoningContent) {
+                                        reasoningContent.innerHTML = '';
+                                        renderMarkdown(reasoningContent, currentThinkText.trim() || 'Thinking...');
+                                    }
+                                } else if (data.stream_type === 'summary') {
+                                    currentMainText += data.content;
+                                    responseContent.innerHTML = '';
+                                    renderMarkdown(responseContent, currentMainText.trim());
+                                } else if (data.stream_type === 'status') {
+                                    console.log('Arcturus Status:', data.content);
+                                    if (tText) {
+                                        tText.textContent = data.content;
+                                    }
+                                } else if (data.stream_type === 'success') {
+                                    console.log('Arcturus Success Signal: Synchronizing UI state...');
+                                    if (window.SessionManager && typeof window.SessionManager.initSession === 'function') {
+                                        window.SessionManager.initSession().then(() => {
+                                            localStorage.setItem('activeProjectLastSaved', Date.now().toString());
+                                            const reloadEvent = new CustomEvent('project-state-reload', {
+                                                detail: { projectId: activeProject }
+                                            });
+                                            window.dispatchEvent(reloadEvent);
+                                            document.dispatchEvent(reloadEvent);
+                                        });
+                                    }
+                                } else if (data.stream_type === 'error') {
+                                    throw new Error(data.content);
                                 }
 
-                                // Update UI
-                                if (aiChatMode === 'think' && reasoningContent) {
-                                    reasoningContent.innerHTML = '';
-                                    renderMarkdown(reasoningContent, currentThinkText.trim() || 'Thinking...');
-                                }
-
-                                responseContent.innerHTML = '';
-                                renderMarkdown(responseContent, currentMainText.trim());
                                 aiChatbotBody.scrollTop = aiChatbotBody.scrollHeight;
 
                             } catch (e) {
